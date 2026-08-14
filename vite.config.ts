@@ -36,6 +36,7 @@ export default defineConfig({
 		viteSingleFile(),
 	],
 	build: {
+		modulePreload: { polyfill: false },
 		target: 'esnext',
 	},
 });

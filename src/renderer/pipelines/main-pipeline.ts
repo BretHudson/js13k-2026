@@ -1,4 +1,5 @@
 import type { Renderer } from '~/renderer/renderer';
+import type { SceneNode } from '~/scene/scene-node';
 import type { Mat4 } from '~/util/mat4';
 import { fetchShader } from '../render-utils';
 import { Pipeline } from './pipeline';
@@ -19,6 +20,9 @@ const faceBufferData = new ArrayBuffer(faces.length * 16);
 const floatView = new Float32Array(faceBufferData);
 const uintView = new Uint32Array(faceBufferData);
 
+const maxInstances = 32;
+const modelBufferData = new Float32Array(maxInstances * 16);
+
 faces.forEach(([x, y, z, face], i) => {
 	const offset = i * 4;
 	floatView[offset + 0] = x;
@@ -29,6 +33,7 @@ faces.forEach(([x, y, z, face], i) => {
 
 export class MainPipeline extends Pipeline {
 	uniformBuffer!: GPUBuffer;
+	modelBuffer!: GPUBuffer;
 	faceBuffer!: GPUBuffer;
 
 	async init(_renderer: Renderer): Promise<void> {
@@ -37,10 +42,16 @@ export class MainPipeline extends Pipeline {
 			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 		});
 
+		this.modelBuffer = this.device.createBuffer({
+			size: modelBufferData.byteLength,
+			usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+		});
+
 		this.faceBuffer = this.device.createBuffer({
 			size: faceBufferData.byteLength,
 			usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 		});
+
 		this.device.queue.writeBuffer(this.faceBuffer, 0, faceBufferData);
 
 		const { pipeline, bindGroup } = await this.buildPipeline();
@@ -65,7 +76,7 @@ export class MainPipeline extends Pipeline {
 	pipeline!: GPURenderPipeline;
 	bindGroup!: GPUBindGroup;
 
-	async #buildPipeline() {
+	async _buildPipeline() {
 		const shaderSrc = await fetchShader(shaderFilename);
 
 		this.device.pushErrorScope('validation');
@@ -105,7 +116,8 @@ export class MainPipeline extends Pipeline {
 			layout: pipeline.getBindGroupLayout(0),
 			entries: [
 				{ binding: 0, resource: { buffer: this.uniformBuffer } },
-				{ binding: 1, resource: { buffer: this.faceBuffer } },
+				{ binding: 1, resource: { buffer: this.modelBuffer } },
+				{ binding: 2, resource: { buffer: this.faceBuffer } },
 			],
 		});
 
@@ -114,7 +126,7 @@ export class MainPipeline extends Pipeline {
 
 	async buildPipeline() {
 		try {
-			return this.#buildPipeline();
+			return this._buildPipeline();
 		} catch (e) {
 			console.error('failed to compile pipeline');
 
@@ -125,13 +137,12 @@ export class MainPipeline extends Pipeline {
 	}
 
 	render(
-		mvpMatrix: Mat4,
+		vpMatrix: Mat4,
 		textureView: GPUTextureView,
 		depthTextureView: GPUTextureView,
+		sceneRoot: SceneNode,
 	) {
 		const { device } = this;
-
-		device.queue.writeBuffer(this.uniformBuffer, 0, mvpMatrix);
 
 		const commandEncoder = device.createCommandEncoder();
 
@@ -154,11 +165,36 @@ export class MainPipeline extends Pipeline {
 
 		const faceCount = faces.length;
 
+		instanceCount = 0;
+		collect(sceneRoot, modelBufferData);
+
+		device.queue.writeBuffer(this.uniformBuffer, 0, vpMatrix);
+		device.queue.writeBuffer(
+			this.modelBuffer,
+			0,
+			modelBufferData.subarray(0, instanceCount * 16),
+		);
+
 		renderPass.setPipeline(this.pipeline);
 		renderPass.setBindGroup(0, this.bindGroup);
-		renderPass.draw(6, faceCount, 0, 0);
+		renderPass.draw(6, faceCount * instanceCount, 0, 0);
 		renderPass.end();
 
 		device.queue.submit([commandEncoder.finish()]);
+	}
+}
+
+let instanceCount = 0;
+function collect(
+	node: SceneNode,
+	modelBufferData: Float32Array,
+	isRoot = true,
+) {
+	if (!isRoot) {
+		modelBufferData.set(node.worldMatrix, instanceCount * 16);
+		++instanceCount;
+	}
+	for (let i = 0; i < node.children.length; ++i) {
+		collect(node.children[i], modelBufferData, false);
 	}
 }

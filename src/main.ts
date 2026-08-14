@@ -1,6 +1,7 @@
 // import { zzfx } from './third-party/zzfx';
 
 import { GameLoop, initKeys } from 'kontra';
+import type { SceneNode } from '~/scene/scene-node';
 import { Camera } from './renderer/camera';
 import { Renderer } from './renderer/renderer';
 import { createNode, updateWorldMatrix } from './scene/scene';
@@ -49,12 +50,22 @@ async function setupApp() {
 	updateCanvasSize();
 
 	const sceneRoot = createNode();
+	const cubes: SceneNode[] = [];
+	for (let x = -1; x <= 1; ++x) {
+		const cube = createNode(x * 1.2);
+		cube.parent = sceneRoot;
+		cubes.push(cube);
+	}
+	sceneRoot.children.push(...cubes);
+
+	const subCube = createNode(0, 1.2);
+	subCube.scale[0] = 0.5;
+	subCube.scale[1] = 0.5;
+	subCube.scale[2] = 0.5;
+	subCube.parent = cubes[1];
+	cubes[1].children.push(subCube);
 
 	const camera = new Camera();
-
-	camera.target[0] = 0.5;
-	camera.target[1] = 0.5;
-	camera.target[2] = 0.5;
 
 	const loop = GameLoop({
 		clearCanvas: false,
@@ -62,11 +73,20 @@ async function setupApp() {
 		update(dt) {
 			camera.update(aspect);
 
+			cubes[1].rot[0] += dt;
+			cubes[1].isDirty = true;
+
+			subCube.rot[1] -= dt;
+			subCube.isDirty = true;
+
+			sceneRoot.rot[1] += dt * 0.2;
+			sceneRoot.isDirty = true;
+
 			updateWorldMatrix(sceneRoot);
 		},
 
 		render: () => {
-			renderer.render(camera);
+			renderer.render(sceneRoot, camera);
 		},
 	});
 

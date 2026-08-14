@@ -1,4 +1,5 @@
 import type { Camera } from '~/renderer/camera';
+import type { SceneNode } from '~/scene/scene-node';
 import { MainPipeline } from './pipelines/main-pipeline';
 
 export class Renderer {
@@ -47,7 +48,7 @@ export class Renderer {
 		});
 	}
 
-	render(camera: Camera) {
+	render(sceneRoot: SceneNode, camera: Camera) {
 		const { context } = this;
 
 		const canvasTexture = context.getCurrentTexture();
@@ -60,6 +61,7 @@ export class Renderer {
 			camera.viewProjMatrix,
 			canvasTextureView,
 			depthTextureView,
+			sceneRoot,
 		);
 	}
 }

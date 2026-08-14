@@ -1,4 +1,4 @@
-import * as mat4 from '..//util/mat4';
+import * as mat4 from '../util/mat4';
 import type { Vec3 } from '~/util/mat4';
 
 export class Camera {
