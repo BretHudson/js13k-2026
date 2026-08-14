@@ -2,6 +2,7 @@ import type { Camera } from '~/renderer/camera';
 import type { SceneNode } from '~/scene/scene-node';
 import { MainPipeline } from './pipelines/main-pipeline';
 import type { Pipeline } from './pipelines/pipeline';
+import { SDFPipeline } from './pipelines/sdf-pipeline';
 
 type PipelineConstructor<T extends Pipeline> = new (
 	device: GPUDevice,
@@ -28,6 +29,7 @@ export class Renderer {
 	}
 
 	mainPipeline!: MainPipeline;
+	sdfPipeline!: SDFPipeline;
 
 	async initPipeline<T extends Pipeline>(
 		PipelineClass: PipelineConstructor<T>,
@@ -40,6 +42,7 @@ export class Renderer {
 
 	async init() {
 		this.mainPipeline = await this.initPipeline(MainPipeline);
+		this.sdfPipeline = await this.initPipeline(SDFPipeline);
 
 		if (import.meta.hot) {
 			this.initHMR();
@@ -53,6 +56,13 @@ export class Renderer {
 					void this.initPipeline(
 						mod.MainPipeline as typeof MainPipeline,
 					).then((p) => (this.mainPipeline = p));
+				}
+			});
+			import.meta.hot.accept('./pipelines/sdf-pipeline', (mod) => {
+				if (mod) {
+					void this.initPipeline(
+						mod.SDFPipeline as typeof SDFPipeline,
+					).then((p) => (this.sdfPipeline = p));
 				}
 			});
 		}
@@ -82,6 +92,13 @@ export class Renderer {
 		const depthTextureView = this.depthTexture.createView();
 
 		this.mainPipeline.render(
+			camera.viewProjMatrix,
+			canvasTextureView,
+			depthTextureView,
+			sceneRoot,
+		);
+
+		this.sdfPipeline.render(
 			camera.viewProjMatrix,
 			canvasTextureView,
 			depthTextureView,
