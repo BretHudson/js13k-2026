@@ -127,9 +127,13 @@ export function createWorld(sceneRoot: SceneNode) {
 
 const FRAMES_TROT_ROTX = [
 	{ legFL: 0.4, legFR: -0.4, head: 0.05 },
+	{ legFL: 0.2, legFR: -0.2, head: 0.025 },
 	{ legFL: 0.0, legFR: 0.0, head: 0.0 },
+	{ legFL: -0.2, legFR: 0.2, head: -0.025 },
 	{ legFL: -0.4, legFR: 0.4, head: -0.05 },
+	{ legFL: -0.2, legFR: 0.2, head: -0.025 },
 	{ legFL: 0.0, legFR: 0.0, head: 0.0 },
+	{ legFL: 0.2, legFR: -0.2, head: 0.025 },
 ];
 
 function applyPose(player: Player, frame: (typeof FRAMES_TROT_ROTX)[number]) {
@@ -151,11 +155,12 @@ function applyPose(player: Player, frame: (typeof FRAMES_TROT_ROTX)[number]) {
 }
 
 export function applyPlayerRestPose(player: Player) {
-	applyPose(player, FRAMES_TROT_ROTX[1]);
+	applyPose(player, FRAMES_TROT_ROTX[2]);
 }
 
 export function applyPlayerWalkAnim(player: Player, elapsed: number) {
-	const index = Math.floor((elapsed * 60) / 4) % 4;
+	const fps = 60 / 4; // 15
+	const index = Math.floor(elapsed * fps) % FRAMES_TROT_ROTX.length;
 
 	applyPose(player, FRAMES_TROT_ROTX[index]);
 }
@@ -233,7 +238,8 @@ export function updatePlayer(player: Player, camera: Camera, dt: number) {
 	if (applyGravity) vy -= gravity * dt * 0.5;
 
 	if (Math.abs(vx) + Math.abs(vz) > 0.3) {
-		applyPlayerWalkAnim(player, elapsed);
+		const walkSpeed = maxSpeed / 4;
+		applyPlayerWalkAnim(player, elapsed * walkSpeed);
 	} else {
 		applyPlayerRestPose(player);
 	}
