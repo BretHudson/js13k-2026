@@ -21,7 +21,8 @@ const floatView = new Float32Array(faceBufferData);
 const uintView = new Uint32Array(faceBufferData);
 
 const maxInstances = 32;
-const modelBufferData = new Float32Array(maxInstances * 16);
+const instanceFloats = 20;
+const modelBufferData = new Float32Array(maxInstances * instanceFloats);
 
 faces.forEach(([x, y, z, face], i) => {
 	const offset = i * 4;
@@ -38,7 +39,7 @@ export class MainPipeline extends Pipeline {
 
 	async init(_renderer: Renderer): Promise<this> {
 		this.uniformBuffer = this.device.createBuffer({
-			size: 64, // 4x4 matrix
+			size: instanceFloats * 4, // 4x4 matrix
 			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 		});
 
@@ -174,7 +175,7 @@ export class MainPipeline extends Pipeline {
 		device.queue.writeBuffer(
 			this.modelBuffer,
 			0,
-			modelBufferData.subarray(0, instanceCount * 16),
+			modelBufferData.subarray(0, instanceCount * instanceFloats),
 		);
 
 		renderPass.setPipeline(this.pipeline);
@@ -189,7 +190,10 @@ export class MainPipeline extends Pipeline {
 let instanceCount = 0;
 function collect(node: SceneNode, modelBufferData: Float32Array) {
 	if (node.shouldRender) {
-		modelBufferData.set(node.worldMatrix, instanceCount * 16);
+		const offset = instanceCount * instanceFloats;
+		modelBufferData.set(node.worldMatrix, offset);
+		modelBufferData.set(node.color, offset + 16);
+		modelBufferData.set([+node.useUV], offset + 19);
 		++instanceCount;
 	}
 	for (let i = 0; i < node.children.length; ++i) {

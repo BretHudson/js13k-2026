@@ -1,10 +1,15 @@
+struct ModelData {
+    mat: mat4x4f,
+    color: vec4f,
+};
+
 struct FaceData {
     pos: vec3f,
     face: u32,
 };
 
 @group(0) @binding(0) var<uniform> vpMatrix: mat4x4f;
-@group(0) @binding(1) var<storage, read> models: array<mat4x4f>;
+@group(0) @binding(1) var<storage, read> models: array<ModelData>;
 @group(0) @binding(2) var<storage, read> faces: array<FaceData>;
 
 struct VertexOutput {
@@ -13,6 +18,8 @@ struct VertexOutput {
     // @interpolate(linear) for affine texture mapping
     // @location(1) @interpolate(linear) uv: vec2f,
     @location(1) uv: vec2f,
+    @location(2) @interpolate(linear) index: f32,
+    @location(3) useUV: f32,
 };
 
 // grabbed from the book of shaders
@@ -74,7 +81,7 @@ fn vs(
     let halfRes = resolution * .5;
 
     let worldPos = f.pos + offset;
-    let clipPos = vpMatrix * model * vec4f(worldPos, 1.0);
+    let clipPos = vpMatrix * model.mat * vec4f(worldPos, 1.0);
 
     let ndc = clipPos.xy / clipPos.w;
     let snappedNdc = round(ndc * halfRes) / halfRes;
@@ -82,7 +89,10 @@ fn vs(
     var out: VertexOutput;
     out.pos = vec4f(snappedNdc * clipPos.w, clipPos.zw);
     out.uv = uv;
-    out.color = vec3f(1, 1, 0);
+    out.color = model.color.rgb;
+    out.useUV = model.color.a;
+
+    out.index = f32(instance_index);
 
     return out;
 }
@@ -99,11 +109,19 @@ fn fs(in: VertexOutput) -> @location(0) vec4f {
     let coord = vec2u(in.pos.xy) % 4u;
     let dither = BAYER_4X4[coord.y * 4u + coord.x];
 
-    let color = vec3f(
-        in.color.r * in.uv.x,
-        in.color.g * in.uv.y,
-        in.color.b,
-    );
+    var color = in.color;
+
+    if in.useUV > 0. {
+        color.r *= in.uv.x;
+        color.g *= in.uv.y;
+        color.b = 0.;
+    }
+
+    let uv = in.uv + in.index * 313.2347;
+    let quv = floor(uv * 16.) / 16.;
+    let seed = random(quv);
+    let bright = clamp(fract(seed), .5, 1.0);
+    color *= pow(bright, 1. / 2.2);
 
     let dithered = color * 31.0 + dither;
     let quantized = clamp(floor(dithered) / 31.0, vec3f(0), vec3f(1));

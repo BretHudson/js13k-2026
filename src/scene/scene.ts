@@ -11,12 +11,15 @@ export function createNode(x = 0, y = 0, z = 0): SceneNode {
 		scale: [1, 1, 1],
 		origin: [0, 0, 0],
 
+		color: [1, 1, 0],
+
 		localMatrix: mat4.create(),
 		worldMatrix: mat4.create(),
 
 		children: [],
 		isDirty: true,
 
+		useUV: true,
 		shouldRender: true,
 	};
 }
@@ -63,7 +66,7 @@ const REST_POSES = {
 
 export function createPlayer(): Player {
 	const playerRoot = createNode();
-	playerRoot.scale[0] = playerRoot.scale[1] = playerRoot.scale[2] = 2;
+	playerRoot.scale[0] = playerRoot.scale[1] = playerRoot.scale[2] = 2.3;
 	playerRoot.shouldRender = false;
 
 	const addPart = (
@@ -79,6 +82,10 @@ export function createPlayer(): Player {
 		node.scale[0] = sx;
 		node.scale[1] = sy;
 		node.scale[2] = sz;
+		node.color[0] = 1;
+		node.color[1] = 1;
+		node.color[2] = 1;
+		node.useUV = false;
 		node.parent = parent;
 		parent.children.push(node);
 		return node;

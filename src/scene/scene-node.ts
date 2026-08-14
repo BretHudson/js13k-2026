@@ -6,6 +6,8 @@ export interface SceneNode {
 	scale: Vec3;
 	origin: Vec3;
 
+	color: Vec3;
+
 	localMatrix: Mat4;
 	worldMatrix: Mat4;
 
@@ -14,5 +16,6 @@ export interface SceneNode {
 
 	isDirty: boolean;
 
+	useUV: boolean;
 	shouldRender: boolean;
 }
