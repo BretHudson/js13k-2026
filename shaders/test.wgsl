@@ -10,7 +10,14 @@ struct FaceData {
 struct VertexOutput {
     @builtin(position) pos: vec4f,
     @location(0) color: vec3f,
+    @location(1) uv: vec2f,
 };
+
+fn random(_st: vec2f) -> f32 {
+    return fract(sin(dot(_st.xy,
+        vec2f(12.9898, 78.233))) *
+        43758.5453123);
+}
 
 const BASES = array<mat2x3f, 6>(
 	// +X: (1, y, 1 - x)
@@ -71,12 +78,27 @@ fn vs(
 
     var out: VertexOutput;
     out.pos = vec4f(snappedNdc * clipPos.w, clipPos.zw);
-    out.color = normalColor;
+    out.uv = uv;
+    out.color = vec3f(uv.x, uv.y, 0);
 
     return out;
 }
 
+const BAYER_4X4 = array<f32, 16>(
+    0.0 / 16.0, 8.0 / 16.0, 2.0 / 16.0, 10.0 / 16.0,
+    12.0 / 16.0, 4.0 / 16.0, 14.0 / 16.0, 6.0 / 16.0,
+    3.0 / 16.0, 11.0 / 16.0, 1.0 / 16.0, 9.0 / 16.0,
+    15.0 / 16.0, 7.0 / 16.0, 13.0 / 16.0, 5.0 / 16.0,
+);
+
 @fragment
 fn fs(in: VertexOutput) -> @location(0) vec4f {
-    return vec4f(in.color, 1.0);
+    let coord = vec2u(in.pos.xy) % 4u;
+    let dither = BAYER_4X4[coord.y * 4u + coord.x];
+
+    let dithered = in.color * 31.0 + dither;
+    let quantized = clamp(floor(dithered) / 31.0, vec3f(0), vec3f(1));
+
+    // let quantized = round(in.color * 31.) / 31.;
+    return vec4f(quantized, 1.0);
 }
