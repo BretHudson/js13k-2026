@@ -71,6 +71,7 @@ async function setupApp() {
 	{
 		const skybox = createNode(0, -1);
 		skybox.scale[0] = skybox.scale[1] = skybox.scale[2] = -100;
+		skybox.rot[1] = Math.PI;
 		sceneRoot.children.push(skybox);
 		skybox.parent = sceneRoot;
 	}
@@ -112,7 +113,9 @@ async function setupApp() {
 		Infinity,
 	);
 
-	let velY = 0;
+	let vx = 0,
+		vy = 0,
+		vz = 0;
 	let gravity = 32;
 
 	const loop = GameLoop({
@@ -126,15 +129,10 @@ async function setupApp() {
 			if (keyPressed('w') || keyPressed('arrowup')) iz -= 1;
 			if (keyPressed('s') || keyPressed('arrowdown')) iz += 1;
 
-			let charging = false;
-			if (keyPressed('shiftleft')) charging = true;
-
-			if (charging) iz = -1;
+			let charging = keyPressed('shiftleft');
+			if (charging && iz === 0) iz = -1;
 
 			const onGround = playerNode.pos[1] < 0.001;
-
-			let jumped = false;
-			if (keyPressed('space') && onGround) jumped = true;
 
 			// rotate
 			const a =
@@ -149,32 +147,47 @@ async function setupApp() {
 				const invLen = 1 / Math.hypot(dx, dz);
 				dx *= invLen;
 				dz *= invLen;
-
-				const targetAngle = Math.atan2(dx, dz);
-
-				playerNode.rot[1] = targetAngle;
 			}
 
-			const speed = (charging ? 16 : 5) * dt;
-			dx *= speed;
-			dz *= speed;
+			const maxSpeed = charging ? 16 : 7;
+			const targetVx = hasInput ? dx * maxSpeed : 0;
+			const targetVz = hasInput ? dz * maxSpeed : 0;
 
-			if (jumped) {
-				velY = Math.sqrt(2 * gravity * 1);
+			const response = onGround ? (charging ? 10 : 20) : 6;
+			const decay = 1 - Math.exp(-response * dt);
+
+			vx += (targetVx - vx) * decay;
+			vz += (targetVz - vz) * decay;
+
+			const horizSpeed = Math.hypot(vx, vz);
+			if (horizSpeed > 0.1) {
+				const targetAngle = Math.atan2(vx, vz);
+
+				let diff = (targetAngle - playerNode.rot[1]) % (Math.PI * 2);
+				diff = ((diff + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+
+				const turnSpeed = charging ? 8 : 20;
+				playerNode.rot[1] += diff * (1 - Math.exp(-turnSpeed * dt));
+			}
+
+			if (keyPressed('space') && onGround) {
+				vy = Math.sqrt(2 * gravity * 1.5);
 			}
 
 			const applyGravity = !onGround;
+			if (applyGravity) vy -= gravity * dt * 0.5;
 
-			if (applyGravity) velY -= gravity * dt * 0.5;
-			playerNode.pos[1] += velY * dt;
+			playerNode.pos[0] += vx * dt;
+			playerNode.pos[1] += vy * dt;
+			playerNode.pos[2] += vz * dt;
+
 			if (playerNode.pos[1] < 0) {
 				playerNode.pos[1] = 0;
-				velY = 0;
+				vy = 0;
 			}
-			if (applyGravity) velY -= gravity * dt * 0.5;
 
-			playerNode.pos[0] += dx;
-			playerNode.pos[2] += dz;
+			if (applyGravity) vy -= gravity * dt * 0.5;
+
 			playerNode.isDirty = true;
 
 			camera.follow(
