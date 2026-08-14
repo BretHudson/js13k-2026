@@ -2,10 +2,28 @@
 
 import { GameLoop, initKeys, keyMap, keyPressed } from 'kontra';
 import type { SceneNode } from '~/scene/scene-node';
-import { Camera } from './renderer/camera';
+import * as cam from './renderer/camera';
 import { Renderer } from './renderer/renderer';
-import { createNode, updateWorldMatrix } from './scene/scene';
-import * as mat4 from './util/mat4';
+import * as render from './renderer/renderer';
+import * as scene from './scene/scene';
+
+let camHMR = cam;
+let sceneHMR = scene;
+let renderHMR = render;
+if (import.meta.hot) {
+	import.meta.hot.accept('./renderer/camera', (mod) => {
+		// @ts-expect-error -- ignore
+		if (mod) camHMR = mod;
+	});
+	import.meta.hot.accept('./scene/scene', (mod) => {
+		// @ts-expect-error -- ignore
+		if (mod) sceneHMR = mod;
+	});
+	import.meta.hot.accept('./renderer/renderer', (mod) => {
+		// @ts-expect-error -- ignore
+		if (mod) renderHMR = mod;
+	});
+}
 
 async function setupApp() {
 	const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -60,63 +78,24 @@ async function setupApp() {
 
 	updateCanvasSize();
 
-	const sceneRoot = createNode();
+	const sceneRoot = sceneHMR.createNode();
 	sceneRoot.shouldRender = false;
 
-	const cubes: SceneNode[] = [];
-	for (let x = -1; x <= 1; ++x) {
-		const cube = createNode(x * 1.2);
-		cube.parent = sceneRoot;
-		cubes.push(cube);
-	}
-	// sceneRoot.children.push(...cubes);
-
-	const playerNode = createPlayer();
+	const playerNode = scene.createPlayer();
 	sceneRoot.children.push(playerNode);
 
-	{
-		const floor = createNode(0, -50.5);
-		floor.scale[0] = floor.scale[1] = floor.scale[2] = 100;
-		floor.rot[0] = Math.PI;
-		sceneRoot.children.push(floor);
-		floor.parent = sceneRoot;
-	}
+	sceneHMR.createWorld(sceneRoot);
 
-	{
-		const skybox = createNode(0, -1);
-		skybox.scale[0] = skybox.scale[1] = skybox.scale[2] = -100;
-		skybox.rot[1] = Math.PI;
-		sceneRoot.children.push(skybox);
-		skybox.parent = sceneRoot;
-	}
-
-	const subCube = createNode(0, 1.2);
-	subCube.scale[0] = 0.5;
-	subCube.scale[1] = 0.5;
-	subCube.scale[2] = 0.5;
-	subCube.parent = cubes[1];
-	cubes[1].children.push(subCube);
-
-	const camera = new Camera();
-
-	function rotate(dt: number) {
-		sceneRoot.rot[1] += dt * 0.2;
-		sceneRoot.isDirty = true;
-
-		cubes[1].rot[0] += dt;
-		cubes[1].isDirty = true;
-
-		subCube.rot[1] -= dt;
-		subCube.isDirty = true;
-	}
+	const camera = camHMR.create();
 
 	function postUpdate() {
-		camera.update(aspect);
+		camHMR.update(camera, aspect);
 
-		updateWorldMatrix(sceneRoot);
+		sceneHMR.updateWorldMatrix(sceneRoot);
 	}
 
-	camera.follow(
+	camHMR.follow(
+		camera,
 		[playerNode.pos[0], playerNode.pos[1] + 1.2, playerNode.pos[2]],
 		0,
 		1,
@@ -146,7 +125,6 @@ async function setupApp() {
 
 			const onGround = playerNode.pos[1] < 0.001;
 
-			// rotate
 			const a =
 				Math.atan2(camera.forward[2], camera.forward[0]) + Math.PI / 2;
 			const c = Math.cos(a);
@@ -202,7 +180,8 @@ async function setupApp() {
 
 			playerNode.isDirty = true;
 
-			camera.follow(
+			cam.follow(
+				camera,
 				[playerNode.pos[0], playerNode.pos[1] + 1.2, playerNode.pos[2]],
 				playerNode.rot[1],
 				1,
@@ -223,44 +202,3 @@ async function setupApp() {
 }
 
 void setupApp();
-
-function createPlayer() {
-	const playerRoot = createNode();
-	playerRoot.scale[0] = playerRoot.scale[1] = playerRoot.scale[2] = 2;
-	playerRoot.shouldRender = false;
-
-	const addPart = (
-		x = 0,
-		y = 0,
-		z = 0,
-		sx = 1,
-		sy = 1,
-		sz = 1,
-		parent = playerRoot,
-	) => {
-		const node = createNode(x, y, z);
-		node.scale[0] = sx;
-		node.scale[1] = sy;
-		node.scale[2] = sz;
-		node.parent = parent;
-		parent.children.push(node);
-		return node;
-	};
-
-	addPart(0, 0.45, 0, 0.45, 0.35, 0.6); // Torso
-	addPart(0, 0.65, 0.2, 0.2, 0.35, 0.2); // Neck
-
-	addPart(0, 0.85, 0.35, 0.3, 0.3, 0.4); // Head
-	const horn = addPart(0, 1.1, 0.5, 0.06, 0.55, 0.06);
-	horn.rot[0] = Math.PI / 5;
-
-	addPart(-0.18, 0.22, 0.2, 0.12, 0.45, 0.12); // Front-Left Leg
-	addPart(0.18, 0.22, 0.2, 0.12, 0.45, 0.12); // Front-Right Leg
-	addPart(-0.2, 0.22, -0.2, 0.14, 0.45, 0.14); // Back-Left Leg
-	addPart(0.2, 0.22, -0.2, 0.14, 0.45, 0.14); // Back-Right Leg
-
-	const tail = addPart(0, 0.35, -0.32, 0.1, 0.45, 0.12);
-	tail.rot[0] = Math.PI / 12;
-
-	return playerRoot;
-}

@@ -65,3 +65,24 @@ export class Renderer {
 		);
 	}
 }
+
+export function render(
+	renderer: Renderer,
+	sceneRoot: SceneNode,
+	camera: Camera,
+) {
+	const { context } = renderer;
+
+	const canvasTexture = context.getCurrentTexture();
+	const canvasTextureView = canvasTexture.createView();
+	renderer.mainPipeline;
+
+	const depthTextureView = renderer.depthTexture.createView();
+
+	renderer.mainPipeline.render(
+		camera.viewProjMatrix,
+		canvasTextureView,
+		depthTextureView,
+		sceneRoot,
+	);
+}
