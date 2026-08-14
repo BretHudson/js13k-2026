@@ -4,6 +4,7 @@ export interface SceneNode {
 	pos: Vec3;
 	rot: Vec3;
 	scale: Vec3;
+	origin: Vec3;
 
 	localMatrix: Mat4;
 	worldMatrix: Mat4;

@@ -30,30 +30,32 @@ export function fromTRS(
   out: Mat4,
   tx: number, ty: number, tz: number,
   rx: number = 0, ry: number = 0, rz: number = 0,
-  sx: number = 1, sy: number = 1, sz: number = 1
+  sx: number = 1, sy: number = 1, sz: number = 1,
+  ox: number = 0, oy: number = 0, oz: number = 0,
 ): Mat4 {
   const cx = Math.cos(rx), sx_ = Math.sin(rx);
   const cy = Math.cos(ry), sy_ = Math.sin(ry);
   const cz = Math.cos(rz), sz_ = Math.sin(rz);
 
-  out[0] = (cy * cz + sy_ * sx_ * sz_) * sx;
-  out[1] = (cx * sz_) * sx;
-  out[2] = (-sy_ * cz + cy * sx_ * sz_) * sx;
-  out[3] = 0;
+  const m00 = (cy * cz + sy_ * sx_ * sz_) * sx;
+  const m01 = (cx * sz_) * sx;
+  const m02 = (-sy_ * cz + cy * sx_ * sz_) * sx;
+
+  const m10 = (-cy * sz_ + sy_ * sx_ * cz) * sy;
+  const m11 = (cx * cz) * sy;
+  const m12 = (sy_ * sz_ + cy * sx_ * cz) * sy;
+
+  const m20 = (sy_ * cx) * sz;
+  const m21 = -sx_ * sz;
+  const m22 = (cy * cx) * sz;
+
+  out[0] = m00; out[1] = m01; out[2] = m02; out[3] = 0;
+  out[4] = m10; out[5] = m11; out[6] = m12; out[7] = 0;
+  out[8] = m20; out[9] = m21; out[10] = m22; out[11] = 0;
   
-  out[4] = (-cy * sz_ + sy_ * sx_ * cz) * sy;
-  out[5] = (cx * cz) * sy;
-  out[6] = (sy_ * sz_ + cy * sx_ * cz) * sy;
-  out[7] = 0;
-  
-  out[8] = (sy_ * cx) * sz;
-  out[9] = -sx_ * sz;
-  out[10] = (cy * cx) * sz;
-  out[11] = 0;
-  
-  out[12] = tx;
-  out[13] = ty;
-  out[14] = tz;
+  out[12] = tx + (ox * sx) - (m00 * ox + m10 * oy + m20 * oz);
+  out[13] = ty + (oy * sy) - (m01 * ox + m11 * oy + m21 * oz);
+  out[14] = tz + (oz * sz) - (m02 * ox + m12 * oy + m22 * oz);
   out[15] = 1;
 
   return out;

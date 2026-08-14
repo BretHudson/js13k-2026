@@ -9,6 +9,7 @@ export function createNode(x = 0, y = 0, z = 0): SceneNode {
 		pos: [x, y, z],
 		rot: [0, 0, 0],
 		scale: [1, 1, 1],
+		origin: [0, 0, 0],
 
 		localMatrix: mat4.create(),
 		worldMatrix: mat4.create(),
@@ -28,6 +29,7 @@ export function updateWorldMatrix(node: SceneNode, parentWorld?: Mat4) {
 			node.pos[0], node.pos[1], node.pos[2],
 			node.rot[0], node.rot[1], node.rot[2],
 			node.scale[0], node.scale[1], node.scale[2],
+			node.origin[0], node.origin[1], node.origin[2],
 		);
 
 		node.isDirty = false;
@@ -52,6 +54,12 @@ interface Player {
 	legBL: SceneNode;
 	legBR: SceneNode;
 }
+
+const REST_POSES = {
+	legFL: { x: -0.2, y: 0.3, z: 0.3 },
+	legFR: { x: 0.2, y: 0.3, z: 0.3 },
+	head: { x: 0.0, y: 0.7, z: 0.4 },
+};
 
 export function createPlayer(): Player {
 	const playerRoot = createNode();
@@ -87,6 +95,11 @@ export function createPlayer(): Player {
 	const legFR = addPart(0.18, 0.22, 0.2, 0.12, 0.45, 0.12);
 	const legBL = addPart(-0.2, 0.22, -0.2, 0.14, 0.45, 0.14);
 	const legBR = addPart(0.2, 0.22, -0.2, 0.14, 0.45, 0.14);
+
+	legFL.origin[1] = 0.5;
+	legFR.origin[1] = 0.5;
+	legBL.origin[1] = 0.5;
+	legBR.origin[1] = 0.5;
 
 	const tail = addPart(0, 0.35, -0.32, 0.1, 0.45, 0.12);
 	tail.rot[0] = Math.PI / 12;
