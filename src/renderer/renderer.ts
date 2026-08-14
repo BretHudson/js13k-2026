@@ -33,6 +33,20 @@ export class Renderer {
 		await mainPipeline.init(this);
 	}
 
+	depthTexture!: GPUTexture;
+	onCanvasSizeUpdate(): void {
+		// update depth texture
+		if (this.depthTexture) this.depthTexture.destroy();
+
+		const { width, height } = this.context.canvas;
+
+		this.depthTexture = this.device.createTexture({
+			size: [width, height],
+			format: 'depth24plus',
+			usage: GPUTextureUsage.RENDER_ATTACHMENT,
+		});
+	}
+
 	render(camera: Camera) {
 		const { context } = this;
 
@@ -40,6 +54,12 @@ export class Renderer {
 		const canvasTextureView = canvasTexture.createView();
 		this.mainPipeline;
 
-		this.mainPipeline.render(camera.viewProjMatrix, canvasTextureView);
+		const depthTextureView = this.depthTexture.createView();
+
+		this.mainPipeline.render(
+			camera.viewProjMatrix,
+			canvasTextureView,
+			depthTextureView,
+		);
 	}
 }

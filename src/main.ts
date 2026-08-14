@@ -19,9 +19,10 @@ async function setupApp() {
 			canvas.height = h;
 			aspect = w / h;
 		}
+
+		renderer.onCanvasSizeUpdate();
 	}
 	window.onresize = updateCanvasSize;
-	updateCanvasSize();
 
 	let isDragging = false;
 
@@ -43,12 +44,17 @@ async function setupApp() {
 	if (!device) throw new Error('Failed to create WebGPU device');
 
 	const renderer = new Renderer(canvas, device);
-
 	await renderer.init();
+
+	updateCanvasSize();
 
 	const sceneRoot = createNode();
 
 	const camera = new Camera();
+
+	camera.target[0] = 0.5;
+	camera.target[1] = 0.5;
+	camera.target[2] = 0.5;
 
 	const loop = GameLoop({
 		clearCanvas: false,
