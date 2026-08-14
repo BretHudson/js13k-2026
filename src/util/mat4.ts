@@ -1,4 +1,5 @@
 export type Mat4 = Float32Array;
+export type Vec3 = [number, number, number];
 
 export const create = (): Mat4 => new Float32Array(16);
 

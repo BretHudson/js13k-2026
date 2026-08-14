@@ -2,7 +2,8 @@
 
 import { GameLoop, initKeys } from 'kontra';
 import { Renderer } from './renderer/renderer';
-import * as mat4 from './util/mat4';
+import { createNode, updateWorldMatrix } from './scene/scene';
+import { Camera } from './renderer/camera';
 
 async function setupApp() {
 	const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -33,15 +34,25 @@ async function setupApp() {
 
 	await renderer.init();
 
+	const sceneRoot = createNode();
+
+	const camera = new Camera();
+
+	let rotY = 0;
+
 	const loop = GameLoop({
 		clearCanvas: false,
 
 		update(dt) {
-			renderer.update(dt, aspect);
+			updateWorldMatrix(sceneRoot);
+
+			camera.yaw += dt;
+
+			camera.update(aspect);
 		},
 
 		render: () => {
-			renderer.render();
+			renderer.render(camera);
 		},
 	});
 

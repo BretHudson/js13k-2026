@@ -1,11 +1,5 @@
+import type { Camera } from '~/renderer/camera';
 import { MainPipeline } from './pipelines/main-pipeline';
-import * as mat4 from '../util/mat4';
-
-const proj = mat4.create();
-const view = mat4.create();
-const vp = mat4.create();
-
-let rotY = 0;
 
 export class Renderer {
 	device: GPUDevice;
@@ -39,21 +33,13 @@ export class Renderer {
 		await mainPipeline.init(this);
 	}
 
-	update(dt: number, aspect: number) {
-		rotY += dt;
-
-		mat4.perspective(proj, 70, aspect, 0, 1000);
-		mat4.fromTRS(view, 0, 0, -5, 0, rotY);
-		mat4.multiply(vp, proj, view);
-	}
-
-	render() {
+	render(camera: Camera) {
 		const { context } = this;
 
 		const canvasTexture = context.getCurrentTexture();
 		const canvasTextureView = canvasTexture.createView();
 		this.mainPipeline;
 
-		this.mainPipeline.render(vp, canvasTextureView);
+		this.mainPipeline.render(camera.viewProjMatrix, canvasTextureView);
 	}
 }
