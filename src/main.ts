@@ -52,13 +52,18 @@ async function setupApp() {
 	updateCanvasSize();
 
 	const sceneRoot = createNode();
+	sceneRoot.shouldRender = false;
+
 	const cubes: SceneNode[] = [];
 	for (let x = -1; x <= 1; ++x) {
 		const cube = createNode(x * 1.2);
 		cube.parent = sceneRoot;
 		cubes.push(cube);
 	}
-	sceneRoot.children.push(...cubes);
+	// sceneRoot.children.push(...cubes);
+
+	const playerNode = createPlayer();
+	sceneRoot.children.push(playerNode);
 
 	{
 		const floor = createNode(0, -50.5);
@@ -101,8 +106,6 @@ async function setupApp() {
 
 		updateWorldMatrix(sceneRoot);
 	}
-
-	const playerNode = cubes[1];
 
 	camera.follow(
 		[playerNode.pos[0], playerNode.pos[1] + 1.2, playerNode.pos[2]],
@@ -211,3 +214,44 @@ async function setupApp() {
 }
 
 void setupApp();
+
+function createPlayer() {
+	const playerRoot = createNode();
+	playerRoot.scale[0] = playerRoot.scale[1] = playerRoot.scale[2] = 2;
+	playerRoot.shouldRender = false;
+
+	const addPart = (
+		x = 0,
+		y = 0,
+		z = 0,
+		sx = 1,
+		sy = 1,
+		sz = 1,
+		parent = playerRoot,
+	) => {
+		const node = createNode(x, y, z);
+		node.scale[0] = sx;
+		node.scale[1] = sy;
+		node.scale[2] = sz;
+		node.parent = parent;
+		parent.children.push(node);
+		return node;
+	};
+
+	addPart(0, 0.45, 0, 0.45, 0.35, 0.6); // Torso
+	addPart(0, 0.65, 0.2, 0.2, 0.35, 0.2); // Neck
+
+	addPart(0, 0.85, 0.35, 0.3, 0.3, 0.4); // Head
+	const horn = addPart(0, 1.1, 0.5, 0.06, 0.55, 0.06);
+	horn.rot[0] = Math.PI / 5;
+
+	addPart(-0.18, 0.22, 0.2, 0.12, 0.45, 0.12); // Front-Left Leg
+	addPart(0.18, 0.22, 0.2, 0.12, 0.45, 0.12); // Front-Right Leg
+	addPart(-0.2, 0.22, -0.2, 0.14, 0.45, 0.14); // Back-Left Leg
+	addPart(0.2, 0.22, -0.2, 0.14, 0.45, 0.14); // Back-Right Leg
+
+	const tail = addPart(0, 0.35, -0.32, 0.1, 0.45, 0.12);
+	tail.rot[0] = Math.PI / 12;
+
+	return playerRoot;
+}

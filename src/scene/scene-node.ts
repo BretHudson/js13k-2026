@@ -12,4 +12,6 @@ export interface SceneNode {
 	parent?: SceneNode;
 
 	isDirty: boolean;
+
+	shouldRender: boolean;
 }

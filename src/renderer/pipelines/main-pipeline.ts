@@ -185,16 +185,12 @@ export class MainPipeline extends Pipeline {
 }
 
 let instanceCount = 0;
-function collect(
-	node: SceneNode,
-	modelBufferData: Float32Array,
-	isRoot = true,
-) {
-	if (!isRoot) {
+function collect(node: SceneNode, modelBufferData: Float32Array) {
+	if (node.shouldRender) {
 		modelBufferData.set(node.worldMatrix, instanceCount * 16);
 		++instanceCount;
 	}
 	for (let i = 0; i < node.children.length; ++i) {
-		collect(node.children[i], modelBufferData, false);
+		collect(node.children[i], modelBufferData);
 	}
 }
