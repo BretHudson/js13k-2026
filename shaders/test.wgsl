@@ -60,10 +60,17 @@ fn vs(
     var offset = ORIGINS[f.face] + BASES[f.face] * uv;
     var normalColor = COLORS[f.face];
 
+    let resolution = vec2f(320, 240);
+    let halfRes = resolution * .5;
+
     let worldPos = f.pos + offset;
+    let clipPos = vpMatrix * model * vec4f(worldPos, 1.0);
+
+    let ndc = clipPos.xy / clipPos.w;
+    let snappedNdc = round(ndc * halfRes) / halfRes;
 
     var out: VertexOutput;
-    out.pos = vpMatrix * model * vec4f(worldPos, 1.0);
+    out.pos = vec4f(snappedNdc * clipPos.w, clipPos.zw);
     out.color = normalColor;
 
     return out;
