@@ -1,0 +1,31 @@
+{
+	"name": "js13k-2026",
+	"version": "0.1.0",
+	"description": "",
+	"main": "index.js",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build && node scripts/build.js",
+		"preview": "vite preview"
+	},
+	"keywords": [],
+	"author": "Bret Hudson",
+	"license": "Apache-2.0",
+	"packageManager": "pnpm@10.33.0",
+	"dependencies": {
+		"kontra": "10.0.2",
+		"tinymusic": "1.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "26.1.1",
+		"@webgpu/types": "0.1.71",
+		"@writegames.com/style-guide": "0.1.1",
+		"eslint": "8.56.0",
+		"roadroller": "2.1.0",
+		"typescript": "6.0.3",
+		"vite": "8.2.1",
+		"vite-plugin-glsl": "1.6.1",
+		"vite-plugin-singlefile": "2.3.3"
+	}
+}
