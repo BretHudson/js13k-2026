@@ -1,9 +1,9 @@
 // import { zzfx } from './third-party/zzfx';
 
 import { GameLoop, initKeys } from 'kontra';
+import { Camera } from './renderer/camera';
 import { Renderer } from './renderer/renderer';
 import { createNode, updateWorldMatrix } from './scene/scene';
-import { Camera } from './renderer/camera';
 
 async function setupApp() {
 	const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -23,6 +23,18 @@ async function setupApp() {
 	window.onresize = updateCanvasSize;
 	updateCanvasSize();
 
+	let isDragging = false;
+
+	window.onpointerdown = () => (isDragging = true);
+	window.onpointerup = () => (isDragging = false);
+
+	window.onpointermove = (e) => {
+		if (!isDragging) return;
+
+		camera.yaw -= e.movementX * 0.005;
+		camera.pitch += e.movementY * 0.005;
+	};
+
 	initKeys();
 
 	if (!navigator.gpu) throw new Error('WebGPU not supported');
@@ -38,17 +50,13 @@ async function setupApp() {
 
 	const camera = new Camera();
 
-	let rotY = 0;
-
 	const loop = GameLoop({
 		clearCanvas: false,
 
 		update(dt) {
-			updateWorldMatrix(sceneRoot);
-
-			camera.yaw += dt;
-
 			camera.update(aspect);
+
+			updateWorldMatrix(sceneRoot);
 		},
 
 		render: () => {
