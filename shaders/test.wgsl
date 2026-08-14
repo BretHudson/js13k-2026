@@ -11,7 +11,8 @@ struct VertexOutput {
     @builtin(position) pos: vec4f,
     @location(0) color: vec3f,
     // @interpolate(linear) for affine texture mapping
-    @location(1) @interpolate(linear) uv: vec2f,
+    // @location(1) @interpolate(linear) uv: vec2f,
+    @location(1) uv: vec2f,
 };
 
 // grabbed from the book of shaders
