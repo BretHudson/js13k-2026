@@ -1,10 +1,11 @@
 // import { zzfx } from './third-party/zzfx';
 
-import { GameLoop, initKeys } from 'kontra';
+import { GameLoop, initKeys, keyMap, keyPressed } from 'kontra';
 import type { SceneNode } from '~/scene/scene-node';
 import { Camera } from './renderer/camera';
 import { Renderer } from './renderer/renderer';
 import { createNode, updateWorldMatrix } from './scene/scene';
+import * as mat4 from './util/mat4';
 
 async function setupApp() {
 	const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -38,6 +39,7 @@ async function setupApp() {
 	};
 
 	initKeys();
+	keyMap.ShiftLeft = 'shiftleft';
 
 	if (!navigator.gpu) throw new Error('WebGPU not supported');
 	const adapter = await navigator.gpu.requestAdapter();
@@ -58,6 +60,21 @@ async function setupApp() {
 	}
 	sceneRoot.children.push(...cubes);
 
+	{
+		const floor = createNode(0, -50.5);
+		floor.scale[0] = floor.scale[1] = floor.scale[2] = 100;
+		floor.rot[0] = Math.PI;
+		sceneRoot.children.push(floor);
+		floor.parent = sceneRoot;
+	}
+
+	{
+		const skybox = createNode(0, -1);
+		skybox.scale[0] = skybox.scale[1] = skybox.scale[2] = -100;
+		sceneRoot.children.push(skybox);
+		skybox.parent = sceneRoot;
+	}
+
 	const subCube = createNode(0, 1.2);
 	subCube.scale[0] = 0.5;
 	subCube.scale[1] = 0.5;
@@ -67,22 +84,109 @@ async function setupApp() {
 
 	const camera = new Camera();
 
+	function rotate(dt: number) {
+		sceneRoot.rot[1] += dt * 0.2;
+		sceneRoot.isDirty = true;
+
+		cubes[1].rot[0] += dt;
+		cubes[1].isDirty = true;
+
+		subCube.rot[1] -= dt;
+		subCube.isDirty = true;
+	}
+
+	function postUpdate() {
+		camera.update(aspect);
+
+		updateWorldMatrix(sceneRoot);
+	}
+
+	const playerNode = cubes[1];
+
+	camera.follow(
+		[playerNode.pos[0], playerNode.pos[1] + 1.2, playerNode.pos[2]],
+		0,
+		1,
+		1,
+		Infinity,
+		Infinity,
+	);
+
+	let velY = 0;
+	let gravity = 32;
+
 	const loop = GameLoop({
 		clearCanvas: false,
 
 		update(dt) {
-			camera.update(aspect);
+			let ix = 0;
+			let iz = 0;
+			if (keyPressed('a') || keyPressed('arrowleft')) ix -= 1;
+			if (keyPressed('d') || keyPressed('arrowright')) ix += 1;
+			if (keyPressed('w') || keyPressed('arrowup')) iz -= 1;
+			if (keyPressed('s') || keyPressed('arrowdown')) iz += 1;
 
-			cubes[1].rot[0] += dt;
-			cubes[1].isDirty = true;
+			let charging = false;
+			if (keyPressed('shiftleft')) charging = true;
 
-			subCube.rot[1] -= dt;
-			subCube.isDirty = true;
+			if (charging) iz = -1;
 
-			sceneRoot.rot[1] += dt * 0.2;
-			sceneRoot.isDirty = true;
+			const onGround = playerNode.pos[1] < 0.001;
 
-			updateWorldMatrix(sceneRoot);
+			let jumped = false;
+			if (keyPressed('space') && onGround) jumped = true;
+
+			// rotate
+			const a =
+				Math.atan2(camera.forward[2], camera.forward[0]) + Math.PI / 2;
+			const c = Math.cos(a);
+			const s = Math.sin(a);
+			let dx = ix * c - iz * s;
+			let dz = ix * s + iz * c;
+
+			const hasInput = ix !== 0 || iz !== 0;
+			if (hasInput) {
+				const invLen = 1 / Math.hypot(dx, dz);
+				dx *= invLen;
+				dz *= invLen;
+
+				const targetAngle = Math.atan2(dx, dz);
+
+				playerNode.rot[1] = targetAngle;
+			}
+
+			const speed = (charging ? 16 : 5) * dt;
+			dx *= speed;
+			dz *= speed;
+
+			if (jumped) {
+				velY = Math.sqrt(2 * gravity * 1);
+			}
+
+			const applyGravity = !onGround;
+
+			if (applyGravity) velY -= gravity * dt * 0.5;
+			playerNode.pos[1] += velY * dt;
+			if (playerNode.pos[1] < 0) {
+				playerNode.pos[1] = 0;
+				velY = 0;
+			}
+			if (applyGravity) velY -= gravity * dt * 0.5;
+
+			playerNode.pos[0] += dx;
+			playerNode.pos[2] += dz;
+			playerNode.isDirty = true;
+
+			camera.follow(
+				[playerNode.pos[0], playerNode.pos[1] + 1.2, playerNode.pos[2]],
+				playerNode.rot[1],
+				1,
+				dt,
+				6,
+				charging ? 5 : 1.5,
+			);
+
+			postUpdate();
 		},
 
 		render: () => {
