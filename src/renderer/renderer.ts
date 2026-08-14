@@ -1,6 +1,12 @@
 import type { Camera } from '~/renderer/camera';
 import type { SceneNode } from '~/scene/scene-node';
 import { MainPipeline } from './pipelines/main-pipeline';
+import type { Pipeline } from './pipelines/pipeline';
+
+type PipelineConstructor<T extends Pipeline> = new (
+	device: GPUDevice,
+	presentationFormat: GPUTextureFormat,
+) => T;
 
 export class Renderer {
 	device: GPUDevice;
@@ -23,15 +29,33 @@ export class Renderer {
 
 	mainPipeline!: MainPipeline;
 
-	async init() {
-		const mainPipeline = new MainPipeline(
+	async initPipeline<T extends Pipeline>(
+		PipelineClass: PipelineConstructor<T>,
+	): Promise<T> {
+		return await new PipelineClass(
 			this.device,
 			this.presentationFormat,
-		);
+		).init(this);
+	}
 
-		this.mainPipeline = mainPipeline;
+	async init() {
+		this.mainPipeline = await this.initPipeline(MainPipeline);
 
-		await mainPipeline.init(this);
+		if (import.meta.hot) {
+			this.initHMR();
+		}
+	}
+
+	initHMR(): void {
+		if (import.meta.hot) {
+			import.meta.hot.accept('./pipelines/main-pipeline', (mod) => {
+				if (mod) {
+					void this.initPipeline(
+						mod.MainPipeline as typeof MainPipeline,
+					).then((p) => (this.mainPipeline = p));
+				}
+			});
+		}
 	}
 
 	depthTexture!: GPUTexture;

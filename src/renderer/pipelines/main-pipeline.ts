@@ -36,7 +36,7 @@ export class MainPipeline extends Pipeline {
 	modelBuffer!: GPUBuffer;
 	faceBuffer!: GPUBuffer;
 
-	async init(_renderer: Renderer): Promise<void> {
+	async init(_renderer: Renderer): Promise<this> {
 		this.uniformBuffer = this.device.createBuffer({
 			size: 64, // 4x4 matrix
 			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -60,6 +60,8 @@ export class MainPipeline extends Pipeline {
 		this.bindGroup = bindGroup;
 
 		this.initHMR();
+
+		return this;
 	}
 
 	initHMR(): void {

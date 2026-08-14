@@ -1,10 +1,9 @@
 // import { zzfx } from './third-party/zzfx';
 
 import { GameLoop, initKeys, keyMap, keyPressed } from 'kontra';
-import type { SceneNode } from '~/scene/scene-node';
 import * as cam from './renderer/camera';
-import { Renderer } from './renderer/renderer';
 import * as render from './renderer/renderer';
+import { Renderer } from './renderer/renderer';
 import * as scene from './scene/scene';
 
 let camHMR = cam;

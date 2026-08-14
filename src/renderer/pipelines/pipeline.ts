@@ -9,5 +9,5 @@ export abstract class Pipeline {
 		this.presentationFormat = presentationFormat;
 	}
 
-	abstract init(renderer: Renderer): Promise<void>;
+	abstract init(renderer: Renderer): Promise<this>;
 }

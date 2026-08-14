@@ -10,9 +10,11 @@ struct FaceData {
 struct VertexOutput {
     @builtin(position) pos: vec4f,
     @location(0) color: vec3f,
-    @location(1) uv: vec2f,
+    // @interpolate(linear) for affine texture mapping
+    @location(1) @interpolate(linear) uv: vec2f,
 };
 
+// grabbed from the book of shaders
 fn random(_st: vec2f) -> f32 {
     return fract(sin(dot(_st.xy,
         vec2f(12.9898, 78.233))) *
@@ -40,7 +42,7 @@ const ORIGINS = array<vec3f, 6>(
     vec3f(-0.5, 0.5, 0.5), // +Y
     vec3f(-0.5, -0.5, -0.5), // -Y
     vec3f(-0.5, -0.5, 0.5), // +Z
-    vec3f(0.5, -0.5, -0.5)// -Z
+    vec3f(0.5, -0.5, -0.5), // -Z
 );
 
 const COLORS = array<vec3f, 6>(
@@ -49,7 +51,7 @@ const COLORS = array<vec3f, 6>(
     vec3f(0.5, 0.9, 0.5),
     vec3f(0.3, 0.6, 0.3),
     vec3f(0.4, 0.6, 0.9),
-    vec3f(0.3, 0.4, 0.7)
+    vec3f(0.3, 0.4, 0.7),
 );
 
 @vertex
@@ -79,7 +81,7 @@ fn vs(
     var out: VertexOutput;
     out.pos = vec4f(snappedNdc * clipPos.w, clipPos.zw);
     out.uv = uv;
-    out.color = vec3f(uv.x, uv.y, 0);
+    out.color = vec3f(1, 1, 0);
 
     return out;
 }
@@ -96,7 +98,13 @@ fn fs(in: VertexOutput) -> @location(0) vec4f {
     let coord = vec2u(in.pos.xy) % 4u;
     let dither = BAYER_4X4[coord.y * 4u + coord.x];
 
-    let dithered = in.color * 31.0 + dither;
+    let color = vec3f(
+        in.color.r * in.uv.x,
+        in.color.g * in.uv.y,
+        in.color.b,
+    );
+
+    let dithered = color * 31.0 + dither;
     let quantized = clamp(floor(dithered) / 31.0, vec3f(0), vec3f(1));
 
     // let quantized = round(in.color * 31.) / 31.;
