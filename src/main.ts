@@ -6,6 +6,21 @@ import { Renderer } from './renderer/renderer';
 async function setupApp() {
 	const canvas = document.getElementById('c') as HTMLCanvasElement;
 
+	let aspect = 1;
+	function updateCanvasSize() {
+		const dpr = Math.min(window.devicePixelRatio || 1, 2);
+		const w = (canvas.clientWidth * dpr) | 0;
+		const h = (canvas.clientHeight * dpr) | 0;
+
+		if (canvas.width !== w || canvas.height !== h) {
+			canvas.width = w;
+			canvas.height = h;
+			aspect = w / h;
+		}
+	}
+	window.onresize = updateCanvasSize;
+	updateCanvasSize();
+
 	initKeys();
 
 	if (!navigator.gpu) throw new Error('WebGPU not supported');
