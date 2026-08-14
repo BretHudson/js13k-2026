@@ -1,6 +1,6 @@
 // import { zzfx } from './third-party/zzfx';
 
-import { GameLoop, init, initKeys, keyPressed, Sprite } from 'kontra';
+import { GameLoop, initKeys } from 'kontra';
 import { Renderer } from './renderer/renderer';
 
 async function setupApp() {
@@ -29,7 +29,6 @@ async function setupApp() {
 	if (!device) throw new Error('Failed to create WebGPU device');
 
 	const renderer = new Renderer(canvas, device);
-	const { context } = renderer;
 
 	await renderer.init();
 
@@ -39,27 +38,7 @@ async function setupApp() {
 		update(dt) {},
 
 		render() {
-			const canvasTexture = context.getCurrentTexture();
-			const canvasTextureView = canvasTexture.createView();
-
-			const commandEncoder = device.createCommandEncoder();
-
-			const renderPass = commandEncoder.beginRenderPass({
-				colorAttachments: [
-					{
-						view: canvasTextureView,
-						clearValue: { r: 0.05, g: 0.05, b: 0.1, a: 1.0 },
-						loadOp: 'clear',
-						storeOp: 'store',
-					},
-				],
-			});
-
-			renderPass.setPipeline(renderer.pipeline);
-			renderPass.draw(3);
-			renderPass.end();
-
-			device.queue.submit([commandEncoder.finish()]);
+			renderer.render();
 		},
 	});
 

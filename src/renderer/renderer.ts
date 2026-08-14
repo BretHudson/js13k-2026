@@ -1,6 +1,4 @@
-import { fetchShader } from './render-utils';
-
-const shaderFilename = 'test.wgsl';
+import { MainPipeline } from './pipelines/main-pipeline';
 
 export class Renderer {
 	device: GPUDevice;
@@ -21,42 +19,26 @@ export class Renderer {
 		this.context = context;
 	}
 
-	pipeline!: GPURenderPipeline;
-
-	async buildPipeline() {
-		const shaderSrc = await fetchShader(shaderFilename);
-
-		const module = this.device.createShaderModule({
-			label: 'shader module',
-			code: shaderSrc,
-		});
-
-		const format = this.presentationFormat;
-		const pipeline = this.device.createRenderPipeline({
-			layout: 'auto',
-			vertex: { module },
-			fragment: { module, targets: [{ format }] },
-			primitive: { topology: 'triangle-list' },
-		});
-
-		return { pipeline };
-	}
+	mainPipeline!: MainPipeline;
 
 	async init() {
-		const { pipeline } = await this.buildPipeline();
+		const mainPipeline = new MainPipeline(
+			this.device,
+			this.presentationFormat,
+		);
 
-		this.pipeline = pipeline;
+		this.mainPipeline = mainPipeline;
 
-		this.initHMR();
+		await mainPipeline.init(this);
 	}
 
-	initHMR(): void {
-		import.meta.hot?.on('shader-update', (data: { file: string }) => {
-			if (data.file.endsWith(`shaders/${shaderFilename}`)) {
-				void this.buildPipeline().then(({ pipeline }) => {
-					this.pipeline = pipeline;
-				});
-			}
-		});
+	render() {
+		const { context } = this;
+
+		const canvasTexture = context.getCurrentTexture();
+		const canvasTextureView = canvasTexture.createView();
+		this.mainPipeline;
+
+		this.mainPipeline.render(canvasTextureView);
 	}
 }

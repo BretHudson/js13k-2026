@@ -10,5 +10,5 @@ fn vs(@builtin(vertex_index) idx: u32) -> @builtin(position) vec4f {
 
 @fragment
 fn fs() -> @location(0) vec4f {
-    return vec4f(1.0, 0.0, 1.0, 1.0);
+    return vec4f(1.0, 1.0, 1.0, 1.0);
 }
