@@ -2,6 +2,7 @@
 
 import { GameLoop, initKeys } from 'kontra';
 import { Renderer } from './renderer/renderer';
+import * as mat4 from './util/mat4';
 
 async function setupApp() {
 	const canvas = document.getElementById('c') as HTMLCanvasElement;
@@ -35,9 +36,11 @@ async function setupApp() {
 	const loop = GameLoop({
 		clearCanvas: false,
 
-		update(dt) {},
+		update(dt) {
+			renderer.update(dt, aspect);
+		},
 
-		render() {
+		render: () => {
 			renderer.render();
 		},
 	});

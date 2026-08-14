@@ -28,7 +28,7 @@ export function multiply(out: Mat4, a: Mat4, b: Mat4): Mat4 {
 export function fromTRS(
   out: Mat4,
   tx: number, ty: number, tz: number,
-  rx: number, ry: number, rz: number,
+  rx: number = 0, ry: number = 0, rz: number = 0,
   sx: number = 1, sy: number = 1, sz: number = 1
 ): Mat4 {
   const cx = Math.cos(rx), sx_ = Math.sin(rx);
