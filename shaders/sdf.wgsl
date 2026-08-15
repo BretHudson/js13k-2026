@@ -225,6 +225,9 @@ fn noise3D(p: vec3f) -> f32 {
 fn rayMarchFur(ro: vec3f, rd: vec3f, maxT: f32) -> vec4f {
     var t = 0.0;
     var density = 0.0;
+    var lightAcc = vec3f(0.0);
+
+    let lightDir = normalize(vec3f(0.5, 1.0, 1.4));
 
     for (var i = 0; i < MAX_FUR_STEPS; i++) {
         if t >= maxT || t >= MAX_DIST { break; }
@@ -238,20 +241,22 @@ fn rayMarchFur(ro: vec3f, rd: vec3f, maxT: f32) -> vec4f {
         }
 
         if d >= 0.0 {
-            // let n = getNormal(p);
-            // let fiberDir = n;
+            let n = getNormal(p);
+            let fiberDir = n;
 
-            // TODO(bret): figure out origin
-            let o = vec3f(0.0);
-            let fiberDir = normalize(p - o);
             let viewDir = -rd;
             let grazing = 1. - abs(dot(fiberDir, viewDir));
 
             let fur = smoothstep(FUR_DEPTH, 0.0, d);
             let noiseRaw = noise3D(p * 3.);
             let noise = mix(.5, 1., noiseRaw);
-            let densitySample = fur * noise * (1.0 + grazing * 2.0);
-            density += densitySample * FUR_STEP * FUR_DENSITY;
+
+            let densitySample = fur * noise * FUR_STEP * FUR_DENSITY;
+            density += densitySample;
+
+            let diffuse = max(dot(fiberDir, lightDir), 0.0);
+            let lightAmount = .25 + diffuse + grazing * .5;
+            lightAcc += vec3f(lightAmount) * densitySample;
 
             t += FUR_STEP;
             continue;
@@ -261,7 +266,9 @@ fn rayMarchFur(ro: vec3f, rd: vec3f, maxT: f32) -> vec4f {
     }
 
     let alpha = 1.0 - exp(-density);
-    return vec4f(density, 0.0, 0.0, 0.0);
+    let furColor = vec3f(1., 0., 1.);
+    let color = (furColor * lightAcc) / max(density, 0.0001);
+    return vec4f(color, alpha);
 }
 
 fn getSceneDepthDistance(uvNorm: vec2f, ro: vec3f, rd: vec3f, invVP: mat4x4f) -> f32 {
@@ -299,28 +306,38 @@ fn fs(in: VertexOutput) -> FragmentOutput {
 
     // let pixelScale = length(dpdx(rd)) + length(dpdy(rd));
 
-    // let res = rayMarch(ro, rd, maxSceneT);
-    let res = rayMarchFur(ro, rd, maxSceneT);
+    let res = rayMarch(ro, rd, maxSceneT);
+    let furRes = rayMarchFur(ro, rd, maxSceneT);
     let t = res.x;
-    if t >= maxSceneT || t > MAX_DIST { discard; }
 
-    let p = ro + rd * t;
-    let n = getNormal(p);
+    let bodyHit = t < maxSceneT && t <= MAX_DIST;
+    let furHit = furRes.a > 0.001;
 
-    let lightDir = normalize(vec3f(0.5, 1.0, 1.4));
+    if !bodyHit && !furHit { discard; }
 
-    // let diffuse = max(dot(n, lightDir), 0.0); // dull
-    let diffuse = dot(n, lightDir) * 0.5 + 0.5; // vibrant
+    var bodyColor = vec3f(0.0);
+    if bodyHit {
+        let p = ro + rd * t;
+        let n = getNormal(p);
 
-    let ambient = 0.15;
-    let lighting = clamp(ambient + diffuse, 0.0, 1.0);
+        let lightDir = normalize(vec3f(0.5, 1.0, 1.4));
 
-    var baseColor = COLORS[u32(res.y)];
-    let finalColor = baseColor * lighting;
+        // let diffuse = max(dot(n, lightDir), 0.0); // dull
+        let diffuse = dot(n, lightDir) * 0.5 + 0.5; // vibrant
+
+        let ambient = 0.15;
+        let lighting = clamp(ambient + diffuse, 0.0, 1.0);
+
+        let baseColor = COLORS[u32(res.y)];
+        bodyColor = baseColor * lighting;
+    }
+
+    let finalColor = mix(bodyColor, furRes.rgb, furRes.a);
 
     var out: FragmentOutput;
-    // out.color = vec4f(finalColor, 1.0);
-    out.color = vec4f(vec3f(t), 1.0);
+    out.color = vec4f(finalColor, 1.0);
+    // out.color = furRes;
+    // vec4f(vec3f(furRes.x), 1.0);
     // out.depth = hitDepth;
 
     return out;
