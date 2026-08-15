@@ -80,7 +80,7 @@ fn getNormal(p: vec3f) -> vec3f {
 
 // raymarch
 const MIN_DIST: f32 = 0.001;
-const MAX_DIST: f32 = 20.0;
+const MAX_DIST: f32 = 1000.0;
 const MAX_STEPS: i32 = 64;
 
 fn rayMarch(ro: vec3f, rd: vec3f) -> f32 {
@@ -139,10 +139,11 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let p = ro + rd * t;
     let n = getNormal(p);
 
-    let lightDir = normalize(vec3f(1.0, 2.0, -1.5));
+    let lightDir = normalize(vec3f(0.5, 1.0, .4));
     let viewDir = normalize(ro - p);
     let halfVec = normalize(lightDir + viewDir);
 
+    // TODO(bret): update this to more match the mesh shader
     let diff = max(dot(n, lightDir), 0.0);
     let spec = pow(max(dot(n, halfVec), 0.0), 32.0);
     let ambient = 0.15;

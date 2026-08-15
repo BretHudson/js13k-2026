@@ -20,6 +20,7 @@ struct VertexOutput {
     @location(1) uv: vec2f,
     @location(2) @interpolate(linear) index: f32,
     @location(3) useUV: f32,
+    @location(4) @interpolate(flat) normal: vec3f,
 };
 
 // grabbed from the book of shaders
@@ -53,6 +54,15 @@ const ORIGINS = array<vec3f, 6>(
     vec3f(0.5, -0.5, -0.5), // -Z
 );
 
+const NORMALS = array<vec3f, 6>(
+    vec3f(1.0, 0.0, 0.0), // +X
+    vec3f(-1.0, 0.0, 0.0), // -X
+    vec3f(0.0, 1.0, 0.0), // +Y
+    vec3f(0.0, -1.0, 0.0), // -Y
+    vec3f(0.0, 0.0, 1.0), // +Z
+    vec3f(0.0, 0.0, -1.0), // -Z
+);
+
 const COLORS = array<vec3f, 6>(
     vec3f(0.9, 0.4, 0.4),
     vec3f(0.8, 0.3, 0.3),
@@ -80,6 +90,10 @@ fn vs(
     let resolution = vec2f(320, 240);
     let halfRes = resolution * .5;
 
+    let localNormal = NORMALS[f.face];
+
+    let normal = normalize((model.mat * vec4f(localNormal, 0.0)).xyz);
+
     let worldPos = f.pos + offset;
     let clipPos = vpMatrix * model.mat * vec4f(worldPos, 1.0);
 
@@ -91,6 +105,7 @@ fn vs(
     out.uv = uv;
     out.color = model.color.rgb;
     out.useUV = model.color.a;
+    out.normal = normal.xyz;
 
     out.index = f32(instance_index);
 
@@ -106,26 +121,38 @@ const BAYER_4X4 = array<f32, 16>(
 
 @fragment
 fn fs(in: VertexOutput) -> @location(0) vec4f {
-    let coord = vec2u(in.pos.xy) % 4u;
-    let dither = BAYER_4X4[coord.y * 4u + coord.x];
-
-    var color = in.color;
+    var baseColor = in.color;
 
     if in.useUV > 0. {
-        color.r *= in.uv.x;
-        color.g *= in.uv.y;
-        color.b = 0.;
+        baseColor.r *= in.uv.x;
+        baseColor.g *= in.uv.y;
+        baseColor.b = 0.;
     }
 
     let uv = in.uv + in.index * 313.2347;
     let quv = floor(uv * 16.) / 16.;
     let seed = random(quv);
     let bright = clamp(fract(seed), .5, 1.0);
-    color *= pow(bright, 1. / 2.2);
+    baseColor *= pow(bright, 1. / 2.2);
 
-    let dithered = color * 31.0 + dither;
-    let quantized = clamp(floor(dithered) / 31.0, vec3f(0), vec3f(1));
+    // lighting (bring these in via uniforms)
+    let sunDir = normalize(vec3f(0.5, 1.0, .4));
+    let sunColor = vec3f(1., .95, .78);
+    let skyColor = vec3f(.25, .45, .6);
 
-    // let quantized = round(in.color * 31.) / 31.;
+    // let diff = max(dot(in.normal, sunDir), 0.0); // dull
+    let diff = dot(in.normal, sunDir) * 0.5 + 0.5; // vibrant
+
+    let lighting = (sunColor * diff * 0.7) + skyColor * 0.4;
+    let litColor = baseColor * lighting;
+
+    // dithering
+    let coord = vec2u(in.pos.xy) % 4u;
+    let dither = BAYER_4X4[coord.y * 4u + coord.x];
+
+    let dithered = litColor * 31.0 + dither;
+
+    // quantize to 15-bit color
+    let quantized = clamp(floor(dithered) / 31.0, vec3f(0.), vec3f(1.));
     return vec4f(quantized, 1.0);
 }

@@ -99,7 +99,7 @@ async function setupApp() {
 	const loop = GameLoop({
 		clearCanvas: false,
 
-		blur: false,
+		blur: true,
 
 		update(dt) {
 			let charging = keyPressed('shiftleft');
