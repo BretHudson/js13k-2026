@@ -1,5 +1,6 @@
 import type { Camera } from '~/renderer/camera';
 import type { SceneNode } from '~/scene/scene-node';
+import { BlitPipeline } from './pipelines/blit-pipeline';
 import { MainPipeline } from './pipelines/main-pipeline';
 import type { Pipeline } from './pipelines/pipeline';
 import { SDFPipeline } from './pipelines/sdf-pipeline';
@@ -28,8 +29,14 @@ export class Renderer {
 		this.context = context;
 	}
 
+	sceneTexture!: GPUTexture;
+	depthTexture!: GPUTexture;
+
 	mainPipeline!: MainPipeline;
+	blitPipeline!: BlitPipeline;
 	sdfPipeline!: SDFPipeline;
+
+	blitBindGroup!: GPUBindGroup;
 
 	async initPipeline<T extends Pipeline>(
 		PipelineClass: PipelineConstructor<T>,
@@ -44,7 +51,12 @@ export class Renderer {
 		this.onCanvasSizeUpdate();
 
 		this.mainPipeline = await this.initPipeline(MainPipeline);
+		this.blitPipeline = await this.initPipeline(BlitPipeline);
 		this.sdfPipeline = await this.initPipeline(SDFPipeline);
+
+		this.blitBindGroup = this.blitPipeline.createBindGroup(
+			this.sceneTexture.createView(),
+		);
 
 		if (import.meta.hot) {
 			this.initHMR();
@@ -60,6 +72,13 @@ export class Renderer {
 					).then((p) => (this.mainPipeline = p));
 				}
 			});
+			import.meta.hot.accept('./pipelines/blit-pipeline', (mod) => {
+				if (mod) {
+					void this.initPipeline(
+						mod.BlitPipeline as typeof BlitPipeline,
+					).then((p) => (this.blitPipeline = p));
+				}
+			});
 			import.meta.hot.accept('./pipelines/sdf-pipeline', (mod) => {
 				if (mod) {
 					void this.initPipeline(
@@ -70,15 +89,38 @@ export class Renderer {
 		}
 	}
 
-	depthTexture!: GPUTexture;
 	onCanvasSizeUpdate(): void {
+		const { width, height } = this.context.canvas;
+		const aspect = width / height;
+
+		let w = 320,
+			h = 240;
+		if (aspect > w / h) {
+			w = Math.round(h * aspect);
+		} else {
+			h = Math.round(w / aspect);
+		}
+
+		// update scene texture
+		if (this.sceneTexture) this.sceneTexture.destroy();
+
+		this.sceneTexture = this.device.createTexture({
+			size: [w, h],
+			format: this.presentationFormat,
+			usage:
+				GPUTextureUsage.RENDER_ATTACHMENT |
+				GPUTextureUsage.TEXTURE_BINDING,
+		});
+
+		this.blitBindGroup = this.blitPipeline?.createBindGroup(
+			this.sceneTexture.createView(),
+		);
+
 		// update depth texture
 		if (this.depthTexture) this.depthTexture.destroy();
 
-		const { width, height } = this.context.canvas;
-
 		this.depthTexture = this.device.createTexture({
-			size: [width, height],
+			size: [w, h],
 			format: 'depth24plus',
 			usage:
 				GPUTextureUsage.RENDER_ATTACHMENT |
@@ -102,10 +144,12 @@ export function render(
 
 	renderer.mainPipeline.render(
 		camera.viewProjMatrix,
-		canvasTextureView,
+		renderer.sceneTexture.createView(),
 		depthTextureView,
 		sceneRoot,
 	);
+
+	renderer.blitPipeline.render(renderer.blitBindGroup, canvasTextureView);
 
 	renderer.sdfPipeline.render(
 		camera.viewProjMatrix,

@@ -30,20 +30,9 @@ async function setupApp() {
 	let aspect = 1;
 	function updateCanvasSize() {
 		const dpr = Math.min(window.devicePixelRatio || 1, 2);
-		const rawW = (canvas.clientWidth * dpr) | 0;
-		const rawH = (canvas.clientHeight * dpr) | 0;
-		aspect = rawW / rawH;
-
-		// let w = 320,
-		// 	h = 240;
-		// if (aspect > w / h) {
-		// 	w = Math.round(h * aspect);
-		// } else {
-		// 	h = Math.round(w / aspect);
-		// }
-
-		const w = rawW,
-			h = rawH;
+		const w = (canvas.clientWidth * dpr) | 0;
+		const h = (canvas.clientHeight * dpr) | 0;
+		aspect = w / h;
 
 		if (canvas.width !== w || canvas.height !== h) {
 			canvas.width = w;
