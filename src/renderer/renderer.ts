@@ -157,6 +157,8 @@ export function render(
 		depthTextureView,
 		sceneRoot,
 		elapsed,
+		renderer.context.canvas,
+		camera,
 	);
 }
 

@@ -1,9 +1,10 @@
+import type { Camera } from '~/renderer/camera';
 import type { Renderer } from '~/renderer/renderer';
 import type { SceneNode } from '~/scene/scene-node';
 import type { Mat4 } from '~/util/mat4';
+import * as mat4 from '../../util/mat4';
 import { fetchShader } from '../render-utils';
 import { Pipeline } from './pipeline';
-import * as mat4 from '../../util/mat4';
 
 const shaderFilename = 'sdf.wgsl';
 
@@ -12,7 +13,7 @@ const invVpMatrix = mat4.create();
 export class SDFPipeline extends Pipeline {
 	uniformBuffer!: GPUBuffer;
 
-	uniformData = new Float32Array(20);
+	uniformData = new Float32Array(24);
 
 	async init(renderer: Renderer): Promise<this> {
 		this.depthTextureView = renderer.depthTexture.createView();
@@ -133,6 +134,8 @@ export class SDFPipeline extends Pipeline {
 		depthTextureView: GPUTextureView,
 		sceneRoot: SceneNode,
 		time: number,
+		canvas: HTMLCanvasElement | OffscreenCanvas,
+		camera: Camera,
 	) {
 		const { device } = this;
 
@@ -169,7 +172,16 @@ export class SDFPipeline extends Pipeline {
 		mat4.invert(invVpMatrix, vpMatrix);
 
 		this.uniformData.set(invVpMatrix, 0);
-		this.uniformData[16] = time;
+		let i = 16;
+		// camera
+		this.uniformData[i++] = camera.eye[0];
+		this.uniformData[i++] = camera.eye[1];
+		this.uniformData[i++] = camera.eye[2];
+		// time
+		this.uniformData[i++] = time;
+		// resolution
+		this.uniformData[i++] = canvas.width;
+		this.uniformData[i++] = canvas.height;
 
 		device.queue.writeBuffer(
 			this.uniformBuffer,
