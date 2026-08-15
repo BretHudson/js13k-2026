@@ -58,17 +58,9 @@ interface Player {
 	legBR: SceneNode;
 }
 
-const REST_POSES = {
-	legFL: { x: -0.2, y: 0.3, z: 0.3 },
-	legFR: { x: 0.2, y: 0.3, z: 0.3 },
-	head: { x: 0.0, y: 0.7, z: 0.4 },
-};
-
 export function createPlayer(): Player {
 	const playerRoot = createNode();
-	// const SCALE = 2.3;
-	const SCALE = 1;
-	playerRoot.scale[0] = playerRoot.scale[1] = playerRoot.scale[2] = SCALE;
+	playerRoot.scale[0] = playerRoot.scale[1] = playerRoot.scale[2] = 2.3;
 	playerRoot.shouldRender = false;
 
 	const addPart = (
