@@ -34,13 +34,16 @@ async function setupApp() {
 		const rawH = (canvas.clientHeight * dpr) | 0;
 		aspect = rawW / rawH;
 
-		let w = 320,
-			h = 240;
-		if (aspect > w / h) {
-			w = Math.round(h * aspect);
-		} else {
-			h = Math.round(w / aspect);
-		}
+		// let w = 320,
+		// 	h = 240;
+		// if (aspect > w / h) {
+		// 	w = Math.round(h * aspect);
+		// } else {
+		// 	h = Math.round(w / aspect);
+		// }
+
+		const w = rawW,
+			h = rawH;
 
 		if (canvas.width !== w || canvas.height !== h) {
 			canvas.width = w;
@@ -88,10 +91,11 @@ async function setupApp() {
 
 	const camera = camHMR.create();
 
-	function postUpdate() {
+	function postUpdate(dt: number) {
 		camHMR.update(camera, aspect);
 
 		sceneHMR.updateWorldMatrix(sceneRoot);
+		renderHMR.updateTime(dt);
 	}
 
 	camHMR.follow(
@@ -127,11 +131,11 @@ async function setupApp() {
 				charging ? 5 : 1.5,
 			);
 
-			postUpdate();
+			postUpdate(dt);
 		},
 
 		render: () => {
-			renderer.render(sceneRoot, camera);
+			renderHMR.render(renderer, sceneRoot, camera);
 		},
 	});
 

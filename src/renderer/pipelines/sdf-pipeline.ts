@@ -3,14 +3,27 @@ import type { SceneNode } from '~/scene/scene-node';
 import type { Mat4 } from '~/util/mat4';
 import { fetchShader } from '../render-utils';
 import { Pipeline } from './pipeline';
+import * as mat4 from '../../util/mat4';
 
 const shaderFilename = 'sdf.wgsl';
+
+const invVpMatrix = mat4.create();
 
 export class SDFPipeline extends Pipeline {
 	uniformBuffer!: GPUBuffer;
 
+	uniformData = new Float32Array(20);
+
 	async init(_renderer: Renderer): Promise<this> {
-		this.pipeline = await this.buildPipeline();
+		this.uniformBuffer = this.device.createBuffer({
+			label: 'SDF uniforms buffer',
+			size: this.uniformData.byteLength,
+			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+		});
+
+		const { pipeline, bindGroup } = await this.buildPipeline();
+		this.pipeline = pipeline;
+		this.bindGroup = bindGroup;
 
 		this.initHMR();
 
@@ -20,14 +33,16 @@ export class SDFPipeline extends Pipeline {
 	initHMR(): void {
 		import.meta.hot?.on('shader-update', (data: { file: string }) => {
 			if (data.file.endsWith(`shaders/${shaderFilename}`)) {
-				void this.buildPipeline().then((pipeline) => {
+				void this.buildPipeline().then(({ pipeline, bindGroup }) => {
 					this.pipeline = pipeline;
+					this.bindGroup = bindGroup;
 				});
 			}
 		});
 	}
 
 	pipeline!: GPURenderPipeline;
+	bindGroup!: GPUBindGroup;
 
 	async _buildPipeline() {
 		const shaderSrc = await fetchShader(shaderFilename);
@@ -49,7 +64,7 @@ export class SDFPipeline extends Pipeline {
 			throw new Error(`Shader compilation failed: ${error.message}`);
 		}
 
-		return await this.device.createRenderPipelineAsync({
+		const pipeline = await this.device.createRenderPipelineAsync({
 			layout: 'auto',
 			vertex: { module },
 			fragment: {
@@ -82,6 +97,13 @@ export class SDFPipeline extends Pipeline {
 				format: 'depth24plus',
 			},
 		});
+
+		const bindGroup = this.device.createBindGroup({
+			layout: pipeline.getBindGroupLayout(0),
+			entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
+		});
+
+		return { pipeline, bindGroup };
 	}
 
 	async buildPipeline() {
@@ -92,7 +114,7 @@ export class SDFPipeline extends Pipeline {
 
 			if (!this.pipeline) throw e;
 
-			return this.pipeline;
+			return { pipeline: this.pipeline, bindGroup: this.bindGroup };
 		}
 	}
 
@@ -101,6 +123,7 @@ export class SDFPipeline extends Pipeline {
 		textureView: GPUTextureView,
 		depthTextureView: GPUTextureView,
 		sceneRoot: SceneNode,
+		time: number,
 	) {
 		const { device } = this;
 
@@ -123,7 +146,21 @@ export class SDFPipeline extends Pipeline {
 			},
 		});
 
+		mat4.invert(invVpMatrix, vpMatrix);
+
+		this.uniformData.set(invVpMatrix, 0);
+		this.uniformData[16] = time;
+
+		device.queue.writeBuffer(
+			this.uniformBuffer,
+			0,
+			this.uniformData.buffer,
+			this.uniformData.byteOffset,
+			this.uniformData.byteLength,
+		);
+
 		renderPass.setPipeline(this.pipeline);
+		renderPass.setBindGroup(0, this.bindGroup);
 		renderPass.draw(3);
 		renderPass.end();
 

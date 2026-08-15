@@ -81,30 +81,6 @@ export class Renderer {
 			usage: GPUTextureUsage.RENDER_ATTACHMENT,
 		});
 	}
-
-	render(sceneRoot: SceneNode, camera: Camera) {
-		const { context } = this;
-
-		const canvasTexture = context.getCurrentTexture();
-		const canvasTextureView = canvasTexture.createView();
-		this.mainPipeline;
-
-		const depthTextureView = this.depthTexture.createView();
-
-		this.mainPipeline.render(
-			camera.viewProjMatrix,
-			canvasTextureView,
-			depthTextureView,
-			sceneRoot,
-		);
-
-		this.sdfPipeline.render(
-			camera.viewProjMatrix,
-			canvasTextureView,
-			depthTextureView,
-			sceneRoot,
-		);
-	}
 }
 
 export function render(
@@ -126,4 +102,17 @@ export function render(
 		depthTextureView,
 		sceneRoot,
 	);
+
+	renderer.sdfPipeline.render(
+		camera.viewProjMatrix,
+		canvasTextureView,
+		depthTextureView,
+		sceneRoot,
+		elapsed,
+	);
+}
+
+let elapsed = 0;
+export function updateTime(dt: number) {
+	elapsed += dt;
 }
