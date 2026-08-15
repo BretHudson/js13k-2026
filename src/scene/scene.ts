@@ -90,7 +90,38 @@ export function createPlayer(): Player {
 
 	const head = addPart(0, 0.85, 0.35, 0.3, 0.3, 0.4);
 	const horn = addPart(0, 0.5, 0.5, 0.06 / 0.3, 0.55 / 0.3, 0.06 / 0.4, head);
+	horn.color[0] = 0.8;
+	horn.color[1] = 0.83;
+	horn.color[2] = 0.87;
 	horn.rot[0] = Math.PI / 5;
+
+	const maneColor = [1.0, 0.35, 0.65];
+
+	const maneTop = addPart(
+		0,
+		0.55,
+		-0.15,
+		0.1 / 0.3,
+		0.3 / 0.3,
+		0.22 / 0.4,
+		head,
+	);
+	maneTop.color[0] = maneColor[0];
+	maneTop.color[1] = maneColor[1];
+	maneTop.color[2] = maneColor[2];
+	maneTop.rot[0] = -Math.PI / 6;
+
+	const maneMid = addPart(0, 0.76, 0.16, 0.1, 0.22, 0.18);
+	maneMid.color[0] = maneColor[0];
+	maneMid.color[1] = maneColor[1];
+	maneMid.color[2] = maneColor[2];
+	maneMid.rot[0] = -Math.PI / 4;
+
+	const maneBot = addPart(0, 0.62, 0.08, 0.1, 0.2, 0.18);
+	maneBot.color[0] = maneColor[0];
+	maneBot.color[1] = maneColor[1];
+	maneBot.color[2] = maneColor[2];
+	maneBot.rot[0] = -Math.PI / 3.5;
 
 	const legFL = addPart(-0.18, 0.22, 0.2, 0.12, 0.45, 0.12);
 	const legFR = addPart(0.18, 0.22, 0.2, 0.12, 0.45, 0.12);
@@ -102,8 +133,24 @@ export function createPlayer(): Player {
 	legBL.origin[1] = 0.5;
 	legBR.origin[1] = 0.5;
 
+	const addHoof = (legNode: SceneNode) => {
+		const hoof = addPart(0, -0.38, 0, 1.12, 0.25, 1.12, legNode);
+		hoof.color[0] = maneColor[0];
+		hoof.color[1] = maneColor[1];
+		hoof.color[2] = maneColor[2];
+		return hoof;
+	};
+
+	addHoof(legFL);
+	addHoof(legFR);
+	addHoof(legBL);
+	addHoof(legBR);
+
 	const tail = addPart(0, 0.35, -0.32, 0.1, 0.45, 0.12);
 	tail.rot[0] = Math.PI / 12;
+	tail.color[0] = maneColor[0];
+	tail.color[1] = maneColor[1];
+	tail.color[2] = maneColor[2];
 
 	return { root: playerRoot, head, legFL, legFR, legBL, legBR };
 }
