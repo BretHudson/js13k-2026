@@ -191,6 +191,37 @@ const FUR_DEPTH: f32 = 0.35;
 const FUR_STEP: f32 = 0.01;
 const FUR_DENSITY: f32 = 2.0;
 
+fn hash3(p: vec3f) -> f32 {
+    let q = fract(p * 0.3183099 + vec3f(0.1, 0.2, 0.3));
+    return fract(17.0 * q.x * q.y * q.z * (q.x + q.y + q.z));
+}
+
+fn noise3D(p: vec3f) -> f32 {
+    let i = floor(p);
+    let f = fract(p);
+
+    let u = f * f * (3.0 - 2.0 * f);
+
+    let n000 = hash3(i + vec3f(0, 0, 0));
+    let n100 = hash3(i + vec3f(1, 0, 0));
+    let n010 = hash3(i + vec3f(0, 1, 0));
+    let n110 = hash3(i + vec3f(1, 1, 0));
+    let n001 = hash3(i + vec3f(0, 0, 1));
+    let n101 = hash3(i + vec3f(1, 0, 1));
+    let n011 = hash3(i + vec3f(0, 1, 1));
+    let n111 = hash3(i + vec3f(1, 1, 1));
+
+    let nx00 = mix(n000, n100, u.x);
+    let nx10 = mix(n010, n110, u.x);
+    let nx01 = mix(n001, n101, u.x);
+    let nx11 = mix(n011, n111, u.x);
+
+    let nxy0 = mix(nx00, nx10, u.y);
+    let nxy1 = mix(nx01, nx11, u.y);
+
+    return mix(nxy0, nxy1, u.z);
+}
+
 fn rayMarchFur(ro: vec3f, rd: vec3f, maxT: f32) -> vec4f {
     var t = 0.0;
     var density = 0.0;
@@ -207,8 +238,20 @@ fn rayMarchFur(ro: vec3f, rd: vec3f, maxT: f32) -> vec4f {
         }
 
         if d >= 0.0 {
+            // let n = getNormal(p);
+            // let fiberDir = n;
+
+            // TODO(bret): figure out origin
+            let o = vec3f(0.0);
+            let fiberDir = normalize(p - o);
+            let viewDir = -rd;
+            let grazing = 1. - abs(dot(fiberDir, viewDir));
+
             let fur = smoothstep(FUR_DEPTH, 0.0, d);
-            density += fur * FUR_STEP * FUR_DENSITY;
+            let noiseRaw = noise3D(p * 3.);
+            let noise = mix(.5, 1., noiseRaw);
+            let densitySample = fur * noise * (1.0 + grazing * 2.0);
+            density += densitySample * FUR_STEP * FUR_DENSITY;
 
             t += FUR_STEP;
             continue;
