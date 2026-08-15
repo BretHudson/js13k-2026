@@ -97,7 +97,7 @@ fn rotZ(p: vec3f, a: f32) -> vec3f {
     return vec3f(rot2D(p.xy, a), p.z);
 }
 
-fn mapUnicorn(p: vec3f) -> vec2f {
+fn map(p: vec3f) -> vec2f {
     var q = p;
     q *= .7;
     q.y -= .8;
@@ -136,19 +136,6 @@ fn mapUnicorn(p: vec3f) -> vec2f {
     unicorn = minSdf(unicorn, vec2f(hoof, C_OFF_WHITE));
 
     return unicorn;
-}
-
-fn map(p: vec3f) -> vec2f {
-    var unicorn = mapUnicorn(p);
-
-    let o = vec3f(5, 0, 5);
-    var q = p - o;
-    q = vec3f(rot2D(q.xy, uniforms.time), q.z);
-    let box = sdBox(q, vec3f(0.6));
-    let sphere = sdSphere(p - o - vec3f(3. * sin(uniforms.time), 0.2, 0.0), 0.5);
-
-    let objs = smin(box, sphere, 0.3);
-    return minSdf(vec2f(objs, C_NULL), unicorn);
 }
 
 fn getNormal(p: vec3f) -> vec3f {
