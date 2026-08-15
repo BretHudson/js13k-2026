@@ -66,7 +66,9 @@ const REST_POSES = {
 
 export function createPlayer(): Player {
 	const playerRoot = createNode();
-	playerRoot.scale[0] = playerRoot.scale[1] = playerRoot.scale[2] = 2.3;
+	// const SCALE = 2.3;
+	const SCALE = 1;
+	playerRoot.scale[0] = playerRoot.scale[1] = playerRoot.scale[2] = SCALE;
 	playerRoot.shouldRender = false;
 
 	const addPart = (
@@ -116,7 +118,7 @@ export function createPlayer(): Player {
 
 export function createWorld(sceneRoot: SceneNode) {
 	{
-		const floor = createNode(0, -50.5);
+		const floor = createNode(0, -50);
 		floor.scale[0] = floor.scale[1] = floor.scale[2] = 100;
 		floor.rot[0] = Math.PI;
 		sceneRoot.children.push(floor);

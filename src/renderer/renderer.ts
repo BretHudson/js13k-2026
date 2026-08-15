@@ -41,6 +41,8 @@ export class Renderer {
 	}
 
 	async init() {
+		this.onCanvasSizeUpdate();
+
 		this.mainPipeline = await this.initPipeline(MainPipeline);
 		this.sdfPipeline = await this.initPipeline(SDFPipeline);
 
@@ -78,7 +80,9 @@ export class Renderer {
 		this.depthTexture = this.device.createTexture({
 			size: [width, height],
 			format: 'depth24plus',
-			usage: GPUTextureUsage.RENDER_ATTACHMENT,
+			usage:
+				GPUTextureUsage.RENDER_ATTACHMENT |
+				GPUTextureUsage.TEXTURE_BINDING,
 		});
 	}
 }

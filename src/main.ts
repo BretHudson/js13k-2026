@@ -76,10 +76,9 @@ async function setupApp() {
 
 	const renderer = new Renderer(canvas, device);
 	await renderer.init();
+	updateCanvasSize();
 
 	window.onresize = updateCanvasSize;
-
-	updateCanvasSize();
 
 	const sceneRoot = sceneHMR.createNode();
 	sceneRoot.shouldRender = false;
@@ -111,7 +110,7 @@ async function setupApp() {
 	const loop = GameLoop({
 		clearCanvas: false,
 
-		blur: true,
+		blur: false,
 
 		update(dt) {
 			let charging = keyPressed('shiftleft');

@@ -14,7 +14,9 @@ export class SDFPipeline extends Pipeline {
 
 	uniformData = new Float32Array(20);
 
-	async init(_renderer: Renderer): Promise<this> {
+	async init(renderer: Renderer): Promise<this> {
+		this.depthTextureView = renderer.depthTexture.createView();
+
 		this.uniformBuffer = this.device.createBuffer({
 			label: 'SDF uniforms buffer',
 			size: this.uniformData.byteLength,
@@ -91,20 +93,27 @@ export class SDFPipeline extends Pipeline {
 				topology: 'triangle-list',
 				cullMode: 'none',
 			},
-			depthStencil: {
-				depthWriteEnabled: true,
-				depthCompare: 'less',
-				format: 'depth24plus',
-			},
+			// depthStencil: {
+			// 	depthWriteEnabled: true,
+			// 	depthCompare: 'less',
+			// 	format: 'depth24plus',
+			// },
 		});
+
+		console.log(this.depthTextureView);
 
 		const bindGroup = this.device.createBindGroup({
 			layout: pipeline.getBindGroupLayout(0),
-			entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
+			entries: [
+				{ binding: 0, resource: { buffer: this.uniformBuffer } },
+				{ binding: 1, resource: this.depthTextureView },
+			],
 		});
 
 		return { pipeline, bindGroup };
 	}
+
+	depthTextureView!: GPUTextureView;
 
 	async buildPipeline() {
 		try {
@@ -129,6 +138,17 @@ export class SDFPipeline extends Pipeline {
 
 		const commandEncoder = device.createCommandEncoder();
 
+		if (depthTextureView !== this.depthTextureView) {
+			this.depthTextureView = depthTextureView;
+			this.bindGroup = this.device.createBindGroup({
+				layout: this.pipeline.getBindGroupLayout(0),
+				entries: [
+					{ binding: 0, resource: { buffer: this.uniformBuffer } },
+					{ binding: 1, resource: this.depthTextureView },
+				],
+			});
+		}
+
 		const renderPass = commandEncoder.beginRenderPass({
 			colorAttachments: [
 				{
@@ -138,12 +158,12 @@ export class SDFPipeline extends Pipeline {
 					storeOp: 'store',
 				},
 			],
-			depthStencilAttachment: {
-				view: depthTextureView,
-				depthClearValue: 1,
-				depthLoadOp: 'clear',
-				depthStoreOp: 'store',
-			},
+			// depthStencilAttachment: {
+			// 	view: depthTextureView,
+			// 	depthClearValue: 1,
+			// 	depthLoadOp: 'clear',
+			// 	depthStoreOp: 'store',
+			// },
 		});
 
 		mat4.invert(invVpMatrix, vpMatrix);

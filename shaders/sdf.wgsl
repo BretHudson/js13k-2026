@@ -9,6 +9,12 @@ struct VertexOutput {
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var depthTexture: texture_depth_2d;
+
+struct FragmentOutput {
+    @location(0) color: vec4f,
+    // @builtin(frag_depth) depth: f32,
+};
 
 @vertex
 fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
@@ -72,7 +78,7 @@ fn getNormal(p: vec3f) -> vec3f {
 // raymarch
 const MIN_DIST: f32 = 0.001;
 const MAX_DIST: f32 = 20.0;
-const MAX_STEPS: i32 = 64; // Scaled down for game performance
+const MAX_STEPS: i32 = 64;
 
 fn rayMarch(ro: vec3f, rd: vec3f) -> f32 {
     var t = 0.0;
@@ -80,11 +86,32 @@ fn rayMarch(ro: vec3f, rd: vec3f) -> f32 {
         let p = ro + rd * t;
         let d = map(p);
         t += d;
-        if d < MIN_DIST || t > MAX_DIST {
-            break;
-        }
+        if d < MIN_DIST || t > MAX_DIST { break; }
     }
     return t;
+}
+
+fn getSceneDepthDistance(fragCoord: vec2f, ro: vec3f, rd: vec3f, invVP: mat4x4f) -> f32 {
+    let rawDepth = textureLoad(depthTexture, vec2u(fragCoord), 0);
+
+    // If nothing was drawn to this pixel (clear depth = 1.0), allow full raymarch distance
+    if rawDepth >= 1.0 {
+        return MAX_DIST;
+    }
+
+    // Convert pixel coordinate + depth back to NDC
+    let dims = vec2f(textureDimensions(depthTexture));
+    let ndc = vec2f(
+        (fragCoord.x / dims.x) * 2.0 - 1.0,
+        1.0 - (fragCoord.y / dims.y) * 2.0
+    );
+
+    // Unproject the depth buffer position to world space
+    let sceneClip = invVP * vec4f(ndc, rawDepth, 1.0);
+    let sceneWorld = sceneClip.xyz / sceneClip.w;
+
+    // The maximum travel distance along `rd` before hitting scene geometry
+    return length(sceneWorld - ro);
 }
 
 // @fragment
@@ -97,19 +124,22 @@ fn rayMarch(ro: vec3f, rd: vec3f) -> f32 {
 //     let circleColor = vec3f(1.0, 0.35, 0.65);
 //     return vec4f(circleColor, alpha);
 // }
+
 @fragment
-fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-    let nearClip = uniforms.invVpMatrix * vec4f(uv.x, uv.y, 0.0, 1.0);
+fn fs_main(in: VertexOutput) -> FragmentOutput {
+    let nearClip = uniforms.invVpMatrix * vec4f(in.uv.x, in.uv.y, 0.0, 1.0);
     let nearWorld = nearClip.xyz / nearClip.w;
 
-    let farClip = uniforms.invVpMatrix * vec4f(uv.x, uv.y, 1.0, 1.0);
+    let farClip = uniforms.invVpMatrix * vec4f(in.uv.x, in.uv.y, 1.0, 1.0);
     let farWorld = farClip.xyz / farClip.w;
 
     let ro = nearWorld;
     let rd = normalize(farWorld - nearWorld);
 
+    let maxSceneT = getSceneDepthDistance(in.position.xy, ro, rd, uniforms.invVpMatrix);
+
     let t = rayMarch(ro, rd);
-    if t > MAX_DIST { return vec4f(0.0); }
+    if t >= maxSceneT || t > MAX_DIST { discard; }
 
     let p = ro + rd * t;
     let n = getNormal(p);
@@ -125,5 +155,11 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     let baseColor = vec3f(1.0, 0.35, 0.65);
     let finalColor = baseColor * (diff + ambient) + vec3f(1.0) * spec * 0.4;
 
-    return vec4f(finalColor, 1.0);
+    let hitDepth = 0.0;
+
+    var out: FragmentOutput;
+    out.color = vec4f(finalColor, 1.0);
+    // out.depth = hitDepth;
+
+    return out;
 }
