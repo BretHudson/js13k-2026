@@ -99,9 +99,9 @@ fn sdTorso(p: vec3f) -> f32 {
 
 fn sdHead(p: vec3f) -> f32 {
     let mainP = vec3f(0.0, 2.25, 0.0);
-    let snoutP = vec3f(0.0, 2.15, -1.5);
     let main = sdEllipsoid(p - mainP, vec3f(1.75, 1.55, 1.60));
-    let snout = sdEllipsoid(p - snoutP, vec3f(1.75, 1.55, 1.60) - .65);
+    let snoutP = vec3f(0.0, 2.05, -1.35);
+    let snout = sdEllipsoid(p - snoutP, vec3f(1.25, .95, 1.05));
     return smin(main, snout, 0.5);
 }
 
@@ -136,19 +136,21 @@ fn sdEars(p: vec3f) -> f32 {
 }
 
 fn map(p: vec3f) -> f32 {
-    var q = p;
-    // q -= vec3f(0, 2., 0);
-    let torso = sdTorso(q);
-    let head = sdHead(q);
-    let legs = sdLegs(q);
-    let ears = sdEars(q);
+    return sdSphere(p, 3.0);
 
-    var unicorn = torso;
-    unicorn = smin(unicorn, head, 0.65);
-    unicorn = smin(unicorn, legs, 0.45);
-    unicorn = smin(unicorn, ears, 0.35);
+    // var q = p;
+    // // q -= vec3f(0, 2., 0);
+    // let torso = sdTorso(q);
+    // let head = sdHead(q);
+    // let legs = sdLegs(q);
+    // let ears = sdEars(q);
 
-    return unicorn;
+    // var unicorn = torso;
+    // unicorn = smin(unicorn, head, 0.65);
+    // unicorn = smin(unicorn, legs, 0.45);
+    // unicorn = smin(unicorn, ears, 0.35);
+
+    // return unicorn;
 }
 
 fn getNormal(p: vec3f) -> vec3f {
@@ -173,18 +175,50 @@ fn rayMarch(ro: vec3f, rd: vec3f, maxT: f32) -> vec4f {
 
     for (var i = 0; i < MAX_STEPS; i++) {
         let p = ro + rd * t;
-        let res = map(p);
-        let d = res;
+        let d = map(p);
         lastMat = C_WHITE;
-
         if d < MIN_DIST { break; }
 
         t += d;
-
         if t >= maxT || t > MAX_DIST { break; }
     }
 
     return vec4f(t, lastMat, 0.0, 0.0);
+}
+
+const MAX_FUR_STEPS: i32 = 64;
+const FUR_DEPTH: f32 = 0.35;
+const FUR_STEP: f32 = 0.01;
+const FUR_DENSITY: f32 = 2.0;
+
+fn rayMarchFur(ro: vec3f, rd: vec3f, maxT: f32) -> vec4f {
+    var t = 0.0;
+    var density = 0.0;
+
+    for (var i = 0; i < MAX_FUR_STEPS; i++) {
+        if t >= maxT || t >= MAX_DIST { break; }
+
+        let p = ro + rd * t;
+        let d = map(p);
+
+        if d > FUR_DEPTH {
+            t += d - FUR_DEPTH + FUR_STEP;
+            continue;
+        }
+
+        if d >= 0.0 {
+            let fur = smoothstep(FUR_DEPTH, 0.0, d);
+            density += fur * FUR_STEP * FUR_DENSITY;
+
+            t += FUR_STEP;
+            continue;
+        }
+
+        break;
+    }
+
+    let alpha = 1.0 - exp(-density);
+    return vec4f(density, 0.0, 0.0, 0.0);
 }
 
 fn getSceneDepthDistance(uvNorm: vec2f, ro: vec3f, rd: vec3f, invVP: mat4x4f) -> f32 {
@@ -222,7 +256,8 @@ fn fs(in: VertexOutput) -> FragmentOutput {
 
     // let pixelScale = length(dpdx(rd)) + length(dpdy(rd));
 
-    let res = rayMarch(ro, rd, maxSceneT);
+    // let res = rayMarch(ro, rd, maxSceneT);
+    let res = rayMarchFur(ro, rd, maxSceneT);
     let t = res.x;
     if t >= maxSceneT || t > MAX_DIST { discard; }
 
@@ -241,7 +276,8 @@ fn fs(in: VertexOutput) -> FragmentOutput {
     let finalColor = baseColor * lighting;
 
     var out: FragmentOutput;
-    out.color = vec4f(finalColor, 1.0);
+    // out.color = vec4f(finalColor, 1.0);
+    out.color = vec4f(vec3f(t), 1.0);
     // out.depth = hitDepth;
 
     return out;
