@@ -72,10 +72,10 @@ fn minSdf(a: vec2f, b: vec2f) -> vec2f {
 
 const COLORS = array<vec3f, 5>(
     vec3f(1., 0., 1.),
-    vec3f(.96, .97, .98),
+    vec3f(.94, .96, 1.0),
     vec3f(1.0, 0.35, 0.65),
     vec3f(1.0, 0.85, 0.93),
-    vec3f(.93, .97, 1.),
+    vec3f(.87, .90, .94),
 );
 
 const C_NULL = 0;
@@ -116,11 +116,11 @@ fn mapUnicorn(p: vec3f) -> vec2f {
     unicorn = minSdf(unicorn, vec2f(horn, C_SILVER));
 
     let manePos = rotX(q - vec3f(.0, .68, -.5), -.77);
-    let mane = sdBoxRound(manePos, vec3f(0.07, .29, .37), .18);
+    let mane = sdBoxRound(manePos, vec3f(0.07, .29, .37), .2);
     unicorn = minSdf(unicorn, vec2f(mane, C_PINK));
 
     let tailPos = rotX(q - vec3f(.0, -.25, 1.15), -.8);
-    let tail = sdBoxRound(tailPos, vec3f(.14, .22, .47), .18);
+    let tail = sdBoxRound(tailPos, vec3f(.14, .22, .47), .15);
     unicorn = minSdf(unicorn, vec2f(tail, C_PINK));
 
     // mirroed
@@ -254,17 +254,21 @@ fn fs_main(in: VertexOutput) -> FragmentOutput {
     let p = ro + rd * t;
     let n = getNormal(p);
 
-    let lightDir = normalize(vec3f(0.5, 1.0, .4));
+    let sunDir = normalize(vec3f(0.5, 1.0, .4));
+    let sunColor = vec3f(1., .95, .78);
+    let skyColor = vec3f(.25, .45, .6);
+
     let viewDir = normalize(ro - p);
-    let halfVec = normalize(lightDir + viewDir);
+    let halfVec = normalize(sunDir + viewDir);
 
     // TODO(bret): update this to more match the mesh shader
-    let diff = max(dot(n, lightDir), 0.0);
-    let spec = pow(max(dot(n, halfVec), 0.0), 32.0);
-    let ambient = 0.15;
+    // let diff = max(dot(n, sunDir), 0.0); // dull
+    let diff = dot(n, sunDir) * 0.5 + 0.5; // vibrant
+    // let spec = pow(max(dot(n, halfVec), 0.0), 32.0);
 
-    let baseColor = COLORS[u32(res.y)];
-    let finalColor = baseColor * (diff + ambient) + vec3f(1.0) * spec * 0.4;
+    var baseColor = COLORS[u32(res.y)];
+    let lighting = (sunColor * diff * 0.7 + .2) + (skyColor * .4);
+    let finalColor = clamp(baseColor * lighting, vec3f(0.0), vec3f(1.0));
 
     let hitDepth = 0.0;
 

@@ -1,26 +1,26 @@
 // import { zzfx } from './third-party/zzfx';
 
 import { GameLoop, initKeys, keyMap, keyPressed } from 'kontra';
-import * as cam from './renderer/camera';
-import * as render from './renderer/renderer';
+import * as _cam from './renderer/camera';
+import * as _render from './renderer/renderer';
 import { Renderer } from './renderer/renderer';
-import * as scene from './scene/scene';
+import * as _scene from './scene/scene';
 
-let camHMR = cam;
-let sceneHMR = scene;
-let renderHMR = render;
+let cam = _cam;
+let scene = _scene;
+let render = _render;
 if (import.meta.hot) {
 	import.meta.hot.accept('./renderer/camera', (mod) => {
 		// @ts-expect-error -- ignore
-		if (mod) camHMR = mod;
+		if (mod) cam = mod;
 	});
 	import.meta.hot.accept('./scene/scene', (mod) => {
 		// @ts-expect-error -- ignore
-		if (mod) sceneHMR = mod;
+		if (mod) scene = mod;
 	});
 	import.meta.hot.accept('./renderer/renderer', (mod) => {
 		// @ts-expect-error -- ignore
-		if (mod) renderHMR = mod;
+		if (mod) render = mod;
 	});
 }
 
@@ -69,24 +69,24 @@ async function setupApp() {
 
 	window.onresize = updateCanvasSize;
 
-	const sceneRoot = sceneHMR.createNode();
+	const sceneRoot = scene.createNode();
 	sceneRoot.shouldRender = false;
 
-	const player = sceneHMR.createPlayer();
+	const player = scene.createPlayer();
 	sceneRoot.children.push(player.root);
 
-	sceneHMR.createWorld(sceneRoot);
+	scene.createWorld(sceneRoot);
 
-	const camera = camHMR.create();
+	const camera = cam.create();
 
 	function postUpdate(dt: number) {
-		camHMR.update(camera, aspect);
+		cam.update(camera, aspect);
 
-		sceneHMR.updateWorldMatrix(sceneRoot);
-		renderHMR.updateTime(dt);
+		scene.updateWorldMatrix(sceneRoot);
+		render.updateTime(dt);
 	}
 
-	camHMR.follow(
+	cam.follow(
 		camera,
 		[player.root.pos[0], player.root.pos[1] + 1.2, player.root.pos[2]],
 		0,
@@ -103,7 +103,7 @@ async function setupApp() {
 
 		update(dt) {
 			let charging = keyPressed('shiftleft');
-			sceneHMR.updatePlayer(player, camera, dt);
+			scene.updatePlayer(player, camera, dt);
 
 			cam.follow(
 				camera,
@@ -123,7 +123,7 @@ async function setupApp() {
 		},
 
 		render: () => {
-			renderHMR.render(renderer, sceneRoot, camera);
+			render.render(renderer, sceneRoot, camera);
 		},
 	});
 

@@ -133,7 +133,9 @@ fn fs(in: VertexOutput) -> @location(0) vec4f {
     let quv = floor(uv * 16.) / 16.;
     let seed = random(quv);
     let bright = clamp(fract(seed), .5, 1.0);
-    baseColor *= pow(bright, 1. / 2.2);
+    if in.useUV > 0. {
+        baseColor *= pow(bright, 1. / 2.2);
+    }
 
     // lighting (bring these in via uniforms)
     let sunDir = normalize(vec3f(0.5, 1.0, .4));
@@ -143,7 +145,7 @@ fn fs(in: VertexOutput) -> @location(0) vec4f {
     // let diff = max(dot(in.normal, sunDir), 0.0); // dull
     let diff = dot(in.normal, sunDir) * 0.5 + 0.5; // vibrant
 
-    let lighting = (sunColor * diff * 0.7) + skyColor * 0.4;
+    let lighting = (sunColor * diff * 0.7 + .2) + skyColor * 0.4;
     let litColor = baseColor * lighting;
 
     // dithering

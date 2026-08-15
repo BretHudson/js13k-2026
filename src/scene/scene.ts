@@ -76,8 +76,8 @@ export function createPlayer(): Player {
 		node.scale[0] = sx;
 		node.scale[1] = sy;
 		node.scale[2] = sz;
-		node.color[0] = 1;
-		node.color[1] = 1;
+		node.color[0] = 0.94;
+		node.color[1] = 0.96;
 		node.color[2] = 1;
 		node.useUV = false;
 		node.parent = parent;
@@ -133,11 +133,12 @@ export function createPlayer(): Player {
 	legBL.origin[1] = 0.5;
 	legBR.origin[1] = 0.5;
 
+	const hoofColor = [1.0, 0.85, 0.93];
 	const addHoof = (legNode: SceneNode) => {
 		const hoof = addPart(0, -0.38, 0, 1.12, 0.25, 1.12, legNode);
-		hoof.color[0] = maneColor[0];
-		hoof.color[1] = maneColor[1];
-		hoof.color[2] = maneColor[2];
+		hoof.color[0] = hoofColor[0];
+		hoof.color[1] = hoofColor[1];
+		hoof.color[2] = hoofColor[2];
 		return hoof;
 	};
 

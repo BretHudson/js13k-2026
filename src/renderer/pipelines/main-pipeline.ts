@@ -103,7 +103,26 @@ export class MainPipeline extends Pipeline {
 		const pipeline = await this.device.createRenderPipelineAsync({
 			layout: 'auto',
 			vertex: { module },
-			fragment: { module, targets: [{ format }] },
+			fragment: {
+				module,
+				targets: [
+					{
+						format,
+						blend: {
+							color: {
+								srcFactor: 'src-alpha',
+								dstFactor: 'one-minus-src-alpha',
+								operation: 'add',
+							},
+							alpha: {
+								srcFactor: 'one',
+								dstFactor: 'one-minus-src-alpha',
+								operation: 'add',
+							},
+						},
+					},
+				],
+			},
 			primitive: {
 				topology: 'triangle-list',
 				cullMode: 'back',
