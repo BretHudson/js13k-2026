@@ -7,12 +7,13 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build && node scripts/build.js",
+		"build:gh-pages": "vite build",
 		"preview": "vite preview"
 	},
 	"keywords": [],
 	"author": "Bret Hudson",
 	"license": "Apache-2.0",
-	"packageManager": "pnpm@10.33.0",
+	"packageManager": "pnpm@11.22.0",
 	"dependencies": {
 		"kontra": "10.0.2",
 		"tinymusic": "1.0.0"
